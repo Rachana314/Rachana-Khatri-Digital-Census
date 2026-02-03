@@ -1,17 +1,42 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
-import "./App.css";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 
-function App() {
-  const [count, setCount] = useState(0);
+import PublicLayout from "./components/publicLayout";
+import Home from "./pages/public/Home";
 
-  return (
-    <>
-      <h1 class="text-3xl font-bold underline">Hello world!</h1>
-      
-    </>
-  );
+// Smooth scroll to #hash section
+function ScrollToHash() {
+  const { hash, pathname } = useLocation();
+
+  useEffect(() => {
+    // Only handle on home route
+    if (pathname !== "/") return;
+
+    if (!hash) {
+      // No hash: go to top
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    const id = hash.replace("#", "");
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [hash, pathname]);
+
+  return null;
 }
 
-export default App;
+export default function App() {
+  return (
+    <BrowserRouter>
+      <ScrollToHash />
+      <Routes>
+        <Route element={<PublicLayout />}>
+          <Route path="/" element={<Home />} />
+        </Route>
+
+        <Route path="*" element={<div className="p-10">404 Not Found</div>} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
