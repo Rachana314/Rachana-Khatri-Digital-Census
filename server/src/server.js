@@ -1,35 +1,37 @@
-import express from "express"
-import dotenv from "dotenv";
-import { connectDB }from './config/db.js';
-import authRoutes from "./routes/authRoutes.js";
+import express from "express";
+import cors from "cors";
+import path from "path";
 
-dotenv.config();
+import connectDB from "./config/db.js";
+import config from "./config/config.js";
+
+import authRoutes from "./routes/authRoutes.js";
+import householdRoutes from "./routes/householdRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
+
+connectDB();
+
 const app = express();
+
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  })
+);
+
 app.use(express.json());
 
+// serve uploads
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+
+// routes
 app.use("/api/auth", authRoutes);
+app.use("/api/households", householdRoutes);
+app.use("/api/notifications", notificationRoutes);
 
-app.get("/", (_req, res) => {
-  res.json({
-    name: process.env.NAME,
-    version: process.env.VERSION,
-    message: "Server is running",
-  });
-});
+app.get("/", (req, res) => res.send("API Running"));
 
-const PORT = process.env.PORT || 8000;
-
-const startServer = async () => {
-  try {
-    await connectDB();
-    app.listen(PORT, () => {
-      console.log(
-        `${process.env.NAME} is running on http://localhost:${PORT} [${process.env.NODE_ENV}]`
-      );
-    });
-  } catch (err) {
-    console.error("Database connection failed:", err.message);
-  }
-};
-
-startServer();
+app.listen(config.port, () => console.log(`🚀 Server running on ${config.port}`));
