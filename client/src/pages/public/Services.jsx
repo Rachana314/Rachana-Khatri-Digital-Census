@@ -1,7 +1,8 @@
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+
 export default function Services() {
-  return (
-    <div className="p-10 text-2xl font-bold">
-      Services Page Working ✅
-    </div>
-  );
+  const navigate = useNavigate();
+  useEffect(() => navigate("/#services", { replace: true }), [navigate]);
+  return null;
 }

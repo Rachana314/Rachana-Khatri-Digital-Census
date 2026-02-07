@@ -1,110 +1,120 @@
-import { useState } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import logo from "../assets/logo.png";
+
+const desktopItem =
+  "px-4 py-3 rounded-2xl text-sm font-extrabold text-white hover:text-[var(--color-brandOrange)] hover:bg-white/15 transition";
+
+const mobileItem =
+  "w-full text-left px-4 py-3 rounded-2xl text-base font-extrabold text-[var(--color-brandBlack)] hover:text-[var(--color-brandOrange)] hover:bg-black/5 transition";
 
 export default function Header() {
   const [open, setOpen] = useState(false);
-  const closeMenu = () => setOpen(false);
+  const location = useLocation();
 
-  const navClass = ({ isActive }) =>
-    [
-      "font-bold text-base sm:text-lg",              // bigger titles
-      "tracking-wide",                               // clean spacing look
-      "hover:text-[#FA6800] transition-colors",      // orange hover
-      isActive ? "text-[#FA6800]" : "text-white",
-    ].join(" ");
+  const links = [
+    { label: "Home", to: "/#home" },
+    { label: "Services", to: "/#services" },
+    { label: "How it works", to: "/#howitworks" },
+    { label: "News", to: "/#news" },
+    { label: "Privacy", to: "/#privacy" },
+    { label: "Contact", to: "/#contact" },
+  ];
+
+  useEffect(() => setOpen(false), [location.pathname, location.hash]);
+
+  useEffect(() => {
+    document.body.style.overflow = open ? "hidden" : "auto";
+    return () => (document.body.style.overflow = "auto");
+  }, [open]);
 
   return (
-    <header className="bg-[#EF4136] text-white shadow-md">
-      <div className="mx-auto max-w-7xl px-2">
-        {/* Increased header height */}
-        <div className="flex items-center justify-between h-20">
-          
-          {/* Logo Left Corner (no text) */}
-          <Link to="/" onClick={closeMenu} className="flex items-center">
-            <img
-              src={logo}
-              alt="Digital Census Logo"
-              className="h-12 w-12 object-contain"
-            />
+    <header className="sticky top-0 z-50 bg-[var(--color-brandRed)] border-b border-white/30">
+      <div className="max-w-6xl mx-auto px-4 h-[92px] flex items-center justify-between">
+        <Link to="/#home" className="flex items-center gap-3">
+          <div className="h-14 w-14 rounded-2xl bg-white/15 flex items-center justify-center">
+            <img src={logo} alt="Logo" className="h-12 w-auto object-contain" />
+          </div>
+
+          <div className="leading-tight hidden sm:block">
+            <p className="font-extrabold text-lg text-white">Digital Census</p>
+            <p className="text-sm text-white/90">Citizen services portal</p>
+          </div>
+        </Link>
+
+        <nav className="hidden lg:flex items-center gap-2">
+          {links.map((l) => (
+            <NavLink
+              key={l.to}
+              to={l.to}
+              className={({ isActive }) =>
+                `${desktopItem} ${isActive ? "bg-white/20 text-white" : ""}`
+              }
+            >
+              {l.label}
+            </NavLink>
+          ))}
+        </nav>
+
+        <div className="flex items-center gap-2">
+          {/* ✅ ENTER button -> go to /register */}
+          <Link
+            to="/register"
+            className="hidden sm:inline-flex px-6 py-3 rounded-2xl font-extrabold bg-white text-[var(--color-brandBlack)] hover:bg-[var(--color-brandOrange)] hover:text-white transition"
+          >
+            Enter
           </Link>
 
-          {/* Desktop Nav (center area) */}
-          <nav className="hidden md:flex items-center gap-8 lg:gap-10">
-            <NavLink to="/" end className={navClass}>
-              Home
-            </NavLink>
-            <NavLink to="/services" className={navClass}>
-              Services
-            </NavLink>
-            <NavLink to="/how-it-works" className={navClass}>
-              How It Works
-            </NavLink>
-            <NavLink to="/news" className={navClass}>
-              News
-            </NavLink>
-            <NavLink to="/contact" className={navClass}>
-              Contact Us
-            </NavLink>
-            <NavLink to="/privacy-policy" className={navClass}>
-              Privacy
-            </NavLink>
-          </nav>
-
-          {/* Right Corner Actions */}
-          <div className="flex items-center gap-3">
-            {/* Desktop Enter Button */}
-            <Link
-              to="/enter"
-              className="hidden md:inline-flex bg-[#FA6800] hover:bg-orange-600 text-white px-5 py-2 rounded-md font-bold transition"
-            >
-              Enter
-            </Link>
-
-            {/* Mobile Menu Button */}
-            <button
-              className="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-md bg-white/10 hover:bg-white/20 transition"
-              onClick={() => setOpen((v) => !v)}
-              aria-label="Toggle menu"
-              aria-expanded={open}
-            >
-              <span className="text-2xl leading-none">☰</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="lg:hidden inline-flex items-center justify-center h-12 w-12 rounded-2xl bg-white/15 hover:bg-white/25 transition"
+            aria-label="Toggle menu"
+            aria-expanded={open}
+          >
+            <div className="relative w-6 h-6">
+              <span
+                className={`absolute left-0 top-1 h-[3px] w-6 bg-white transition ${
+                  open ? "translate-y-2 rotate-45" : ""
+                }`}
+              />
+              <span
+                className={`absolute left-0 top-3 h-[3px] w-6 bg-white transition ${
+                  open ? "opacity-0" : ""
+                }`}
+              />
+              <span
+                className={`absolute left-0 top-5 h-[3px] w-6 bg-white transition ${
+                  open ? "-translate-y-2 -rotate-45" : ""
+                }`}
+              />
+            </div>
+          </button>
         </div>
       </div>
 
-      {/* Mobile Dropdown Menu */}
       {open && (
-        <div className="md:hidden border-t border-white/20">
-          <div className="px-4 py-4 space-y-3">
-            <NavLink to="/" end onClick={closeMenu} className={navClass}>
-              Home
-            </NavLink>
-            <NavLink to="/services" onClick={closeMenu} className={navClass}>
-              Services
-            </NavLink>
-            <NavLink to="/how-it-works" onClick={closeMenu} className={navClass}>
-              How It Works
-            </NavLink>
-            <NavLink to="/news" onClick={closeMenu} className={navClass}>
-              News
-            </NavLink>
-            <NavLink to="/contact" onClick={closeMenu} className={navClass}>
-              Contact Us
-            </NavLink>
-            <NavLink to="/privacy-policy" onClick={closeMenu} className={navClass}>
-              Privacy
-            </NavLink>
+        <div className="lg:hidden">
+          <div className="fixed inset-0 bg-black/30" onClick={() => setOpen(false)} />
 
-            {/* Mobile Enter Button */}
-            <Link
-              to="/enter"
-              onClick={closeMenu}
-              className="block bg-[#FA6800] hover:bg-orange-600 text-center py-2 rounded-md font-bold transition"
-            >
-              Enter
-            </Link>
+          <div className="fixed left-0 right-0 top-[92px] bg-white border-t border-black/10 shadow-lg">
+            <div className="max-w-6xl mx-auto px-4 py-4">
+              <div className="grid gap-2">
+                {links.map((l) => (
+                  <NavLink key={l.to} to={l.to} className={mobileItem}>
+                    {l.label}
+                  </NavLink>
+                ))}
+
+                {/* ✅ mobile Enter -> /register */}
+                <Link
+                  to="/register"
+                  className="mt-2 inline-flex justify-center px-4 py-3 rounded-2xl font-extrabold text-white bg-[var(--color-brandRed)] hover:bg-[var(--color-brandOrange)] transition"
+                >
+                  Enter
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       )}
