@@ -1,14 +1,13 @@
 import Notification from "../models/Notification.js";
 
 export async function listNotifications(req, res) {
-  const items = await Notification.find({ user: req.user._id }).sort({ createdAt: -1 });
-  res.json(items);
-}
+  try {
+    const items = await Notification.find({ user: req.user._id })
+      .sort({ createdAt: -1 })
+      .limit(50);
 
-export async function markRead(req, res) {
-  const n = await Notification.findOne({ _id: req.params.id, user: req.user._id });
-  if (!n) return res.status(404).json({ message: "Not found" });
-  n.read = true;
-  await n.save();
-  res.json(n);
+    return res.json(items);
+  } catch (err) {
+    return res.status(500).json({ message: err.message || "Failed to list notifications" });
+  }
 }

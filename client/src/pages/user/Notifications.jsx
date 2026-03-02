@@ -1,14 +1,51 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { apiFetch } from "../../lib/api";
 
 export default function Notifications() {
   const { t } = useTranslation();
   const [filter, setFilter] = useState("all");
 
-  // Real-life: start empty; backend will fill
-  const data = []; // [{id,type,title,msg,time}]
+  const [data, setData] = useState([]); // ✅ filled from backend
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const filtered = filter === "all" ? data : data.filter((n) => n.type === filter);
+  useEffect(() => {
+    let alive = true;
+
+    (async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const res = await apiFetch("/api/notifications"); // ✅ backend call
+
+        // backend returns array
+        if (alive) setData(Array.isArray(res) ? res : []);
+      } catch (e) {
+        if (alive) setError(e.message || "Failed to load notifications");
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // ✅ map backend fields -> UI fields
+  const mapped = useMemo(() => {
+    return data.map((n) => ({
+      id: n._id,
+      type: String(n.type || "").toLowerCase(), // form/admin
+      title: n.title || "Notification",
+      msg: n.msg || n.message || "",
+      time: n.createdAt ? new Date(n.createdAt).toLocaleString() : "",
+    }));
+  }, [data]);
+
+  const filtered = filter === "all" ? mapped : mapped.filter((n) => n.type === filter);
 
   const filters = [
     { key: "all", label: t("notifications.filterAll") },
@@ -37,8 +74,17 @@ export default function Notifications() {
         ))}
       </div>
 
+      {error && (
+        <div className="rounded-3xl border border-rose-200 bg-rose-50 p-5">
+          <div className="font-extrabold text-rose-700">Error</div>
+          <div className="text-rose-700/80 mt-1">{error}</div>
+        </div>
+      )}
+
       <div className="rounded-3xl bg-white border shadow-sm overflow-hidden">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="p-10 text-center text-black/60 font-semibold">Loading...</div>
+        ) : filtered.length === 0 ? (
           <div className="p-10 text-center text-black/60 font-semibold">{t("notifications.empty")}</div>
         ) : (
           <div className="divide-y">

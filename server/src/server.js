@@ -8,7 +8,7 @@ import config from "./config/config.js";
 import authRoutes from "./routes/authRoutes.js";
 import householdRoutes from "./routes/householdRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
-
+import adminRoutes from "./routes/adminRoutes.js";
 connectDB();
 
 const app = express();
@@ -31,6 +31,7 @@ app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 app.use("/api/auth", authRoutes);
 app.use("/api/households", householdRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/admin", adminRoutes);
 
 app.get("/", (req, res) => res.send("API Running"));
 

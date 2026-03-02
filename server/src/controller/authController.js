@@ -5,8 +5,6 @@ import config from "../config/config.js";
 import { USER, ADMIN } from "../constants/roles.js";
 import * as authService from "../services/authService.js";
 
-const allowedRoles = [USER, ADMIN];
-
 const signToken = (user) => {
   return jwt.sign(
     { id: user._id, roles: user.roles },
@@ -15,10 +13,10 @@ const signToken = (user) => {
   );
 };
 
-// 🟢 REGISTER
+// 🟢 USER REGISTER (SECURE: cannot self-assign ADMIN)
 export const register = async (req, res) => {
   try {
-    const { name, email, password, roles, profileImageUrl } = req.body;
+    const { name, email, password, profileImageUrl } = req.body;
 
     if (!name?.trim()) return res.status(400).json({ msg: "Name is required" });
     if (!email?.trim()) return res.status(400).json({ msg: "Email is required" });
@@ -30,21 +28,14 @@ export const register = async (req, res) => {
     const exists = await User.findOne({ email: normalizedEmail });
     if (exists) return res.status(409).json({ msg: "Email already registered" });
 
-    let finalRoles = [USER];
-    if (Array.isArray(roles) && roles.length) {
-      const normalized = roles.map((r) => String(r).toUpperCase());
-      const invalid = normalized.filter((r) => !allowedRoles.includes(r));
-      if (invalid.length) return res.status(400).json({ msg: `Invalid role(s): ${invalid.join(", ")}` });
-      finalRoles = normalized;
-    }
-
     const hashed = await bcrypt.hash(password, 10);
 
+    // ✅ Always USER role for normal register
     const user = await User.create({
       name: name.trim(),
       email: normalizedEmail,
       password: hashed,
-      roles: finalRoles,
+      roles: [USER],
       profileImageUrl: profileImageUrl?.trim() || "",
       isVerified: false,
     });
@@ -70,7 +61,7 @@ export const register = async (req, res) => {
   }
 };
 
-// 🔵 LOGIN
+// 🔵 USER LOGIN
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -141,5 +132,93 @@ export const verifyEmailOtp = async (req, res) => {
       success: false,
       message: error.message || "Server error",
     });
+  }
+};
+
+// ✅ ADMIN REGISTER (simple + working)
+export const adminRegister = async (req, res) => {
+  try {
+    const { name, email, password, profileImageUrl } = req.body;
+
+    if (!name?.trim()) return res.status(400).json({ msg: "Name is required" });
+    if (!email?.trim()) return res.status(400).json({ msg: "Email is required" });
+    if (!password || password.length < 8)
+      return res.status(400).json({ msg: "Password must be at least 8 characters" });
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const exists = await User.findOne({ email: normalizedEmail });
+    if (exists) return res.status(409).json({ msg: "Email already registered" });
+
+    const hashed = await bcrypt.hash(password, 10);
+
+    // ✅ Admin created as verified, and role is ADMIN
+    const admin = await User.create({
+      name: name.trim(),
+      email: normalizedEmail,
+      password: hashed,
+      roles: [ADMIN],
+      profileImageUrl: profileImageUrl?.trim() || "",
+      isVerified: true,
+    });
+
+    const token = signToken(admin);
+
+    return res.status(201).json({
+      msg: "Admin registered successfully",
+      token,
+      user: {
+        id: admin._id,
+        name: admin.name,
+        email: admin.email,
+        roles: admin.roles,
+        isVerified: admin.isVerified,
+      },
+    });
+  } catch (err) {
+    console.error("Admin register error:", err);
+    return res.status(500).json({ msg: err.message || "Server error" });
+  }
+};
+
+// ✅ ADMIN LOGIN (only admin accounts allowed)
+export const adminLogin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email?.trim()) return res.status(400).json({ msg: "Email is required" });
+    if (!password) return res.status(400).json({ msg: "Password is required" });
+
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
+    if (!user) return res.status(401).json({ msg: "Invalid credentials" });
+
+    const isAdmin = user.roles?.includes(ADMIN);
+    if (!isAdmin) return res.status(403).json({ msg: "Not an admin account" });
+
+    const ok = await bcrypt.compare(password, user.password);
+    if (!ok) return res.status(401).json({ msg: "Invalid credentials" });
+
+    // Optional (admins are created verified anyway)
+    if (!user.isVerified) {
+      return res.status(403).json({ msg: "Admin email not verified" });
+    }
+
+    const token = signToken(user);
+
+    return res.status(200).json({
+      msg: "Admin login successful",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        roles: user.roles,
+        profileImageUrl: user.profileImageUrl,
+        isVerified: user.isVerified,
+      },
+    });
+  } catch (err) {
+    console.error("Admin login error:", err);
+    return res.status(500).json({ msg: err.message || "Server error" });
   }
 };

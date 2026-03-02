@@ -1,5 +1,5 @@
-import { Link } from "react-router-dom";
-import { useMemo } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 function UserIcon({ className = "h-6 w-6" }) {
@@ -32,7 +32,7 @@ function StatusBadge({ status = "n/a" }) {
       }`}
     >
       <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-      {status.toUpperCase()}
+      {String(status).toUpperCase()}
     </span>
   );
 }
@@ -79,18 +79,42 @@ function GhostBtn({ to, children }) {
 
 export default function Dashboard() {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
 
-  // ✅ Replace with real auth data later
-  const user = useMemo(
-    () => ({
-      name: "Sita Sharma",
-      phone: "+977-98XXXXXXXX",
-      email: "sita@email.com",
-    }),
-    []
-  );
+  // ✅ REAL USER: from localStorage
+  const [user, setUser] = useState({
+    name: "",
+    phone: "",
+    email: "",
+  });
 
-  // ✅ Replace with backend data later
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("user");
+      const token = localStorage.getItem("token");
+
+      // If no token/user, send to login (optional, but good)
+      if (!token || !saved) {
+        // comment this out if you don't want auto-redirect
+        navigate("/login");
+        return;
+      }
+
+      const u = JSON.parse(saved);
+      setUser({
+        name: u?.name || "",
+        email: u?.email || "",
+        phone: u?.phone || "",
+      });
+    } catch {
+      // if JSON is broken, reset and go login
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      navigate("/login");
+    }
+  }, [navigate]);
+
+  // ✅ Replace with backend data later kept as demo data 
   const household = useMemo(
     () => ({
       exists: true,
@@ -136,11 +160,11 @@ export default function Dashboard() {
                 <p className="mt-1 text-sm sm:text-base text-zinc-600 font-medium">{t("dashboard.subtitle")}</p>
 
                 <div className="mt-2 text-sm font-semibold text-zinc-800 flex flex-wrap gap-x-3 gap-y-1">
-                  <span className="truncate">{user.name}</span>
+                  <span className="truncate">{user.name || "—"}</span>
                   <span className="text-zinc-400">•</span>
-                  <span className="truncate">{user.phone}</span>
+                  <span className="truncate">{user.phone || "—"}</span>
                   <span className="text-zinc-400">•</span>
-                  <span className="truncate">{user.email}</span>
+                  <span className="truncate">{user.email || "—"}</span>
                 </div>
               </div>
             </div>

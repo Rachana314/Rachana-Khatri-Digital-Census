@@ -28,18 +28,18 @@ export default function Login() {
 
       const data = await res.json();
 
+      // ❗ Show backend error message properly
       if (!res.ok) return alert(data.msg || data.message || "Login failed");
 
       // ✅ Save JWT token
       localStorage.setItem("token", data.token);
 
-      // (optional) Save user info
+      // ✅ Save logged-in user
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      // ✅ Redirect after login
-      navigate("/user/dashboard"); // change if your route is different
+      navigate("/user/dashboard");
     } catch (err) {
-      alert("Server error");
+      alert(err.message || "Server error");
     } finally {
       setLoading(false);
     }

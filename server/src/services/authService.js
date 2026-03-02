@@ -1,76 +1,105 @@
+import nodemailer from "nodemailer";
 import User from "../models/User.js";
-import { sendEmailOtp } from "../utils/sendEmailOtp.js";
 import config from "../config/config.js";
 
-class AppError extends Error {
-  constructor(message, statusCode = 400) {
-    super(message);
-    this.statusCode = statusCode;
+// ✅ Gmail transporter using App Password
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: config.smtpEmail,
+    pass: config.smtpPassword,
+  },
+});
+
+// ✅ 6-digit OTP
+function makeOtp() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+// ✅ send mail
+async function sendOtpEmail(to, otp) {
+  await transporter.sendMail({
+    from: config.smtpEmail,
+    to,
+    subject: "Digital Census OTP",
+    text: `Your OTP is: ${otp}\nThis OTP expires in ${config.otpExpiryMinutes} minutes.`,
+  });
+}
+
+// ✅ REQUEST OTP
+export async function generateEmailOtp(email) {
+  if (!email) {
+    const err = new Error("Email is required");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const user = await User.findOne({ email: normalizedEmail });
+  if (!user) {
+    const err = new Error("User not found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const otp = makeOtp();
+  const expiryTime = Date.now() + config.otpExpiryMinutes * 60 * 1000;
+
+  user.verificationCode = otp;
+  user.verificationCodeExpiryTime = expiryTime;
+  await user.save();
+
+  // ✅ Try sending real email
+  try {
+    await sendOtpEmail(user.email, otp);
+    return { message: "OTP sent to email" };
+  } catch (e) {
+    // ✅ Dev fallback (so register still works even if Gmail blocks)
+    console.log("⚠️ Email send failed. DEV OTP:", otp);
+    return { message: "Email failed, using devOtp", devOtp: otp };
   }
 }
 
-const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
-const create4DigitOtp = () => String(Math.floor(1000 + Math.random() * 9000));
-
-// 🔹 Generate OTP
-export const generateEmailOtp = async (email) => {
-  const normalizedEmail = normalizeEmail(email);
-  if (!normalizedEmail) throw new AppError("Email is required", 400);
-
-  const user = await User.findOne({ email: normalizedEmail });
-  if (!user) throw new AppError("User not found. Register first.", 404);
-
-  if (user.isVerified) {
-    return { message: "Email is already verified" };
+// ✅ VERIFY OTP
+export async function verifyEmailOtp(email, verificationCode) {
+  if (!email || !verificationCode) {
+    const err = new Error("Email and OTP are required");
+    err.statusCode = 400;
+    throw err;
   }
 
-  const otp = create4DigitOtp();
-  const expiryMs = Date.now() + config.otpExpiryMinutes * 60 * 1000;
-
-  user.verificationCode = otp;
-  user.verificationCodeExpiryTime = expiryMs;
-  await user.save();
-
-  await sendEmailOtp(user.email, otp);
-
-  const isDev = config.env !== "production";
-  return {
-    message: "OTP sent to email",
-    ...(isDev ? { devOtp: otp } : {}),
-  };
-};
-
-// 🔹 Verify OTP
-export const verifyEmailOtp = async (email, verificationCode) => {
-  const normalizedEmail = normalizeEmail(email);
-  const code = String(verificationCode || "").trim();
-
-  if (!normalizedEmail) throw new AppError("Email is required", 400);
-  if (!code) throw new AppError("OTP is required", 400);
+  const normalizedEmail = email.trim().toLowerCase();
 
   const user = await User.findOne({ email: normalizedEmail });
-  if (!user) throw new AppError("User not found", 404);
-
-  if (user.isVerified) {
-    return { message: "Email is already verified" };
+  if (!user) {
+    const err = new Error("User not found");
+    err.statusCode = 404;
+    throw err;
   }
 
   if (!user.verificationCode || !user.verificationCodeExpiryTime) {
-    throw new AppError("No OTP requested. Please request OTP first.", 400);
+    const err = new Error("No OTP requested");
+    err.statusCode = 400;
+    throw err;
   }
 
-  if (Date.now() > Number(user.verificationCodeExpiryTime)) {
-    throw new AppError("OTP expired. Please request a new OTP.", 400);
+  if (Date.now() > user.verificationCodeExpiryTime) {
+    const err = new Error("OTP expired");
+    err.statusCode = 400;
+    throw err;
   }
 
-  if (String(user.verificationCode) !== code) {
-    throw new AppError("Invalid OTP", 400);
+  if (String(user.verificationCode) !== String(verificationCode)) {
+    const err = new Error("Invalid OTP");
+    err.statusCode = 400;
+    throw err;
   }
 
   user.isVerified = true;
-  user.verificationCode = undefined;
-  user.verificationCodeExpiryTime = undefined;
+  user.verificationCode = null;
+  user.verificationCodeExpiryTime = null;
   await user.save();
 
   return { message: "Email verified successfully" };
-};
+}

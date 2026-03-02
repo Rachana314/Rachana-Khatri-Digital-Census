@@ -1,12 +1,13 @@
+// server/src/models/User.js
 import mongoose from "mongoose";
 import { USER, ADMIN } from "../constants/roles.js";
 
 const userSchema = new mongoose.Schema({
-  name: { type: String, required: [true, "Name is required"], trim: true },
+  name: { type: String, required: true, trim: true },
 
   email: {
     type: String,
-    required: [true, "Email is required"],
+    required: true,
     trim: true,
     lowercase: true,
     unique: true,
@@ -16,26 +17,16 @@ const userSchema = new mongoose.Schema({
     },
   },
 
-  password: {
-    type: String,
-    required: [true, "Password is required"],
-    minlength: [8, "Password must be at least 8 characters long"],
-  },
+  password: { type: String, required: true, minlength: 8 },
 
-  roles: {
-    type: [String],
-    default: [USER],
-    enum: [USER, ADMIN],
-  },
+  // ✅ keep roles array (better than single role)
+  roles: { type: [String], default: [USER], enum: [USER, ADMIN] },
 
   profileImageUrl: { type: String, default: "" },
-
   isVerified: { type: Boolean, default: false },
 
-  verificationCode: { type: String },
-  verificationCodeExpiryTime: { type: Number },
-
-  createdAt: { type: Date, default: Date.now, immutable: true },
-});
+  verificationCode: String,
+  verificationCodeExpiryTime: Number,
+}, { timestamps: true });
 
 export default mongoose.model("User", userSchema);

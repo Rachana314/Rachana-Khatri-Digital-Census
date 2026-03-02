@@ -1,5 +1,5 @@
 import express from "express";
-import authMiddleware from "../middleware/authMiddleware.js";
+import authMiddleware from "../middleware/authMiddleWare.js";
 import { upload } from "../middleware/upload.js";
 
 import {
@@ -12,10 +12,10 @@ import {
 } from "../controller/householdController.js";
 
 const router = express.Router();
-router.use((req, res, next) => {
-  console.log("✅ householdRoutes HIT:", req.method, req.originalUrl);
-  next();
-});
+
+// ✅ Debug check (if this prints "undefined" then your import is wrong)
+console.log("✅ authMiddleware loaded:", typeof authMiddleware, authMiddleware?.name);
+
 
 
 router.get("/", authMiddleware, listHouseholds);
@@ -24,8 +24,6 @@ router.get("/:householdId", authMiddleware, getHousehold);
 router.put("/:householdId", authMiddleware, updateHousehold);
 router.post("/:householdId/submit", authMiddleware, submitHousehold);
 
-
-// IMPORTANT: frontend must send FormData with "file" + "type"
 router.post(
   "/:householdId/documents",
   authMiddleware,

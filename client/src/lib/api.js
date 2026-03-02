@@ -8,14 +8,22 @@ export async function apiFetch(path, options = {}) {
     headers: {
       ...(options.headers || {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      "Content-Type": "application/json",
+      // Only set JSON header when we actually send JSON
+      ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
     },
   });
 
-  const data = await res.json().catch(() => ({}));
+  // ✅ Always read raw text first so we can handle HTML/plain text errors too
+  const raw = await res.text();
+  let data = {};
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch {
+    data = { message: raw };
+  }
 
   if (!res.ok) {
-    throw new Error(data.message || `Request failed (${res.status})`);
+    throw new Error(data.message || data.msg || `Request failed (${res.status})`);
   }
 
   return data;
