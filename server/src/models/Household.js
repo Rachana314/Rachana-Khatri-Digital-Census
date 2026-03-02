@@ -1,47 +1,71 @@
 import mongoose from "mongoose";
 
-const MemberSchema = new mongoose.Schema({
-  name: { type: String, default: "" },
-  age: { type: Number, default: null },
-  gender: { type: String, enum: ["Male", "Female", "Other"], default: "Male" },
-  maritalStatus: { type: String, default: "Single" },
-  education: { type: String, default: "" },
-  occupation: { type: String, default: "" },
-  disability: { type: Boolean, default: false },
-  disabilityDetail: { type: String, default: "" },
-}, { _id: false });
+const MemberSchema = new mongoose.Schema(
+  {
+    name: { type: String, default: "" },
+    age: { type: Number, default: null },
+    gender: { type: String, enum: ["Male", "Female", "Other"], default: "Male" },
+    maritalStatus: { type: String, default: "Single" },
+    education: { type: String, default: "" },
+    occupation: { type: String, default: "" },
+    disability: { type: Boolean, default: false },
+    disabilityDetail: { type: String, default: "" },
+  },
+  { _id: false }
+);
 
-const DocumentSchema = new mongoose.Schema({
-  type: { type: String, enum: ["Citizenship", "Birth Certificate", "License"], required: true },
-  url: { type: String, required: true },
-}, { _id: false });
+const DocumentSchema = new mongoose.Schema(
+  {
+    type: { type: String, enum: ["Citizenship", "Birth Certificate", "License"], required: true },
+    url: { type: String, required: true },
+  },
+  { _id: false }
+);
 
-const HouseholdSchema = new mongoose.Schema({
-  householdId: { type: String, unique: true, index: true },
-  user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+const HouseholdSchema = new mongoose.Schema(
+  {
+    householdId: { type: String, unique: true, index: true },
 
-  ward: { type: String, required: true },
-  address: { type: String, required: true },
+    // ✅ one user = one form
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, unique: true, index: true },
 
-  members: { type: [MemberSchema], default: [] },
-  documents: { type: [DocumentSchema], default: [] },
+    ward: { type: String, required: true },
+    address: { type: String, required: true },
 
-  status: { type: String, enum: ["draft", "submitted", "rejected", "verified"], default: "draft" },
-  rejectionReason: { type: String, default: "" },
+    // ✅ no duplicate citizenship
+    citizenshipNo: { type: String, required: true, unique: true, index: true },
 
-  // ✅ NEW: lock verified records
-  locked: { type: Boolean, default: false },
+    members: { type: [MemberSchema], default: [] },
+    documents: { type: [DocumentSchema], default: [] },
 
-  // ✅ NEW: admin audit fields
-  verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-  verifiedAt: { type: Date },
+    status: { type: String, enum: ["draft", "submitted", "rejected", "verified"], default: "draft" },
+    rejectionReason: { type: String, default: "" },
 
-  qrCodeData: { type: String, default: "" },
-}, { timestamps: true });
+    // locked will be used when admin verifies
+    locked: { type: Boolean, default: false },
 
-HouseholdSchema.pre("save", function () {
+    verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    verifiedAt: { type: Date },
+
+    qrCodeData: { type: String, default: "" },
+  },
+  { timestamps: true }
+);
+
+// small helper (clean citizenship format)
+function normalizeCitizenship(v) {
+  return String(v || "").trim().toUpperCase().replace(/\s+/g, "");
+}
+
+HouseholdSchema.pre("validate", function () {
+  // ✅ normalize citizenship before saving (same value looks same)
+  if (this.citizenshipNo) this.citizenshipNo = normalizeCitizenship(this.citizenshipNo);
+
+  // ✅ generate id if missing
   if (!this.householdId) {
-    this.householdId = "HH-" + Math.floor(10000 + Math.random() * 90000);
+    // less chance of collision than only 5 digits
+    const rand = Math.floor(100000 + Math.random() * 900000);
+    this.householdId = `HH-${Date.now()}-${rand}`;
   }
 });
 
