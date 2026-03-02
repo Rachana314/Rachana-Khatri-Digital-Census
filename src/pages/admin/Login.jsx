@@ -19,16 +19,19 @@ export default function Login() {
       const res = await fetch("http://localhost:5000/api/auth/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
       });
 
-      const data = await res.json();
-      if (!res.ok) return alert(data.msg || "Login failed");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return alert(data.msg || data.message || "Login failed");
 
+      // ✅ SAVE BOTH token + user
       localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
       navigate("/admin/dashboard");
-    } catch {
-      alert("Server error");
+    } catch (err) {
+      alert(err.message || "Server error");
     } finally {
       setLoading(false);
     }

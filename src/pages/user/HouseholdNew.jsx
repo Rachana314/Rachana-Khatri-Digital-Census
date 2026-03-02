@@ -167,37 +167,57 @@ export default function HouseholdNew() {
             </div>
           )}
 
-          {/* Step 2 */}
-          {step === 1 && (
-            <div className="space-y-4">
-              <button
-                onClick={() =>
-                  setMembers((prev) => [
-                    ...prev,
-                    { name: "", age: "", gender: "Male", maritalStatus: "Single", education: "", occupation: "" },
-                  ])
-                }
-                className="rounded-2xl px-5 py-3 font-extrabold bg-orange-500 text-white hover:bg-orange-600 active:bg-orange-700 transition"
-              >
-                {t("household.members.add")}
-              </button>
+                  {/* Step 2 */}
+        {step === 1 && (
+          <div className="space-y-4">
+            <button
+              onClick={() =>
+                setMembers((prev) => [
+                  ...prev,
+                  {
+                    name: "",
+                    age: "",
+                    gender: "Male",
+                    maritalStatus: "Single",
+                    education: "",
+                    occupation: "",
+                    disability: false,
+                    disabilityDetail: "",
+                  },
+                ])
+              }
+              className="rounded-2xl px-5 py-3 font-extrabold bg-orange-500 text-white hover:bg-orange-600 active:bg-orange-700 transition"
+            >
+              + {t("household.members.add")}
+            </button>
 
-              {members.map((m, idx) => (
-                <div key={idx} className="rounded-3xl border p-5 bg-white space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="font-extrabold">{t("household.members.member", { n: idx + 1 })}</div>
-                    <button
-                      onClick={() => setMembers((prev) => prev.filter((_, i) => i !== idx))}
-                      className="text-rose-600 font-extrabold hover:underline"
-                    >
-                      {t("common.remove")}
-                    </button>
+            {members.length === 0 && (
+              <div className="text-black/60 font-semibold">
+                Add at least one member to continue.
+              </div>
+            )}
+
+            {members.map((m, idx) => (
+              <div key={idx} className="rounded-3xl border p-5 bg-white space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="font-extrabold">
+                    {t("household.members.member", { n: idx + 1 })}
                   </div>
+                  <button
+                    onClick={() => setMembers((prev) => prev.filter((_, i) => i !== idx))}
+                    className="text-rose-600 font-extrabold hover:underline"
+                  >
+                    {t("common.remove")}
+                  </button>
+                </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Name + Age */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-extrabold text-sm">Full Name</label>
                     <input
-                      className="rounded-2xl border p-3"
-                      placeholder={t("household.members.fullName")}
+                      className="mt-2 rounded-2xl border p-3 w-full"
+                      placeholder="Full name"
                       value={m.name}
                       onChange={(e) => {
                         const copy = [...members];
@@ -205,9 +225,14 @@ export default function HouseholdNew() {
                         setMembers(copy);
                       }}
                     />
+                  </div>
+
+                  <div>
+                    <label className="font-extrabold text-sm">Age</label>
                     <input
-                      className="rounded-2xl border p-3"
-                      placeholder={t("household.members.age")}
+                      type="number"
+                      className="mt-2 rounded-2xl border p-3 w-full"
+                      placeholder="Age"
                       value={m.age}
                       onChange={(e) => {
                         const copy = [...members];
@@ -217,9 +242,120 @@ export default function HouseholdNew() {
                     />
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+
+                {/* Gender + Marital Status */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-extrabold text-sm">Gender</label>
+                    <select
+                      className="mt-2 rounded-2xl border p-3 w-full"
+                      value={m.gender || "Male"}
+                      onChange={(e) => {
+                        const copy = [...members];
+                        copy[idx].gender = e.target.value;
+                        setMembers(copy);
+                      }}
+                    >
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="font-extrabold text-sm">Marital Status</label>
+                    <select
+                      className="mt-2 rounded-2xl border p-3 w-full"
+                      value={m.maritalStatus || "Single"}
+                      onChange={(e) => {
+                        const copy = [...members];
+                        copy[idx].maritalStatus = e.target.value;
+                        setMembers(copy);
+                      }}
+                    >
+                      <option value="Single">Single</option>
+                      <option value="Married">Married</option>
+                      <option value="Divorced">Divorced</option>
+                      <option value="Widowed">Widowed</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Education + Occupation */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-extrabold text-sm">Education</label>
+                    <input
+                      className="mt-2 rounded-2xl border p-3 w-full"
+                      placeholder="e.g. SEE, +2, Bachelor"
+                      value={m.education || ""}
+                      onChange={(e) => {
+                        const copy = [...members];
+                        copy[idx].education = e.target.value;
+                        setMembers(copy);
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-extrabold text-sm">Occupation</label>
+                    <input
+                      className="mt-2 rounded-2xl border p-3 w-full"
+                      placeholder="e.g. Student, Teacher, Farmer"
+                      value={m.occupation || ""}
+                      onChange={(e) => {
+                        const copy = [...members];
+                        copy[idx].occupation = e.target.value;
+                        setMembers(copy);
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Disability */}
+                <div className="rounded-2xl border p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <div className="font-extrabold">Disability</div>
+                      <div className="text-black/60 text-sm font-medium">
+                        Tick if the member has a disability.
+                      </div>
+                    </div>
+
+                    <input
+                      type="checkbox"
+                      className="h-5 w-5"
+                      checked={!!m.disability}
+                      onChange={(e) => {
+                        const copy = [...members];
+                        copy[idx].disability = e.target.checked;
+                        if (!e.target.checked) copy[idx].disabilityDetail = "";
+                        setMembers(copy);
+                      }}
+                    />
+                  </div>
+
+                  {m.disability && (
+                    <div className="mt-3">
+                      <label className="font-extrabold text-sm">Disability Details</label>
+                      <input
+                        className="mt-2 rounded-2xl border p-3 w-full"
+                        placeholder="Describe disability"
+                        value={m.disabilityDetail || ""}
+                        onChange={(e) => {
+                          const copy = [...members];
+                          copy[idx].disabilityDetail = e.target.value;
+                          setMembers(copy);
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
 
           {/* Step 3 */}
           {step === 2 && (
