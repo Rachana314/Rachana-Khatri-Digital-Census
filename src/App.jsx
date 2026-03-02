@@ -17,32 +17,31 @@ import UserLogin from "./pages/user/Login";
 import AdminRegister from "./pages/admin/Register";
 import AdminLogin from "./pages/admin/Login";
 
-// User dashboard
-import UserDashboard from "./pages/user/Dashboard";
-
-// ✅ ADMIN (Layout is inside admin folder)
+// ✅ ADMIN
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminHome from "./pages/admin/AdminHome";
 import AdminHouseholds from "./pages/admin/AdminHouseholds";
-import HouseholdView from "./pages/admin/HouseholdView";
+import AdminHouseholdView from "./pages/admin/HouseholdView"; // ✅ rename
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminReports from "./pages/admin/AdminReports";
 
-// User protected area
+// ✅ USER
 import UserLayout from "./components/layout/UserLayout";
 import ProtectedRoute from "./components/layout/ProtectedRoute";
+import UserDashboard from "./pages/user/Dashboard";
 import Forms from "./pages/user/Forms";
 import Notifications from "./pages/user/Notifications";
 import Settings from "./pages/user/Settings";
 import QrCode from "./pages/user/QrCode";
 import HouseholdNew from "./pages/user/HouseholdNew";
 import Profile from "./pages/user/Profile";
+import UserHouseholdView from "./pages/user/HouseholdView"; // ✅ import user view
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* ✅ PUBLIC */}
+        {/* PUBLIC */}
         <Route element={<PublicLayout />}>
           <Route path="/" element={<Home />} />
           <Route path="/services" element={<Services />} />
@@ -52,18 +51,16 @@ export default function App() {
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         </Route>
 
-        {/* ✅ AUTH (ONLY LOGIN/REGISTER PAGES) */}
+        {/* AUTH */}
         <Route element={<AuthLayout />}>
           <Route path="/register" element={<UserRegister />} />
           <Route path="/login" element={<UserLogin />} />
-
           <Route path="/admin/register" element={<AdminRegister />} />
           <Route path="/admin/login" element={<AdminLogin />} />
-
           <Route path="/enter" element={<Navigate to="/register" replace />} />
         </Route>
 
-        {/* ✅ ADMIN AREA (Protected + Layout + Multiple Pages) */}
+        {/* ADMIN AREA */}
         <Route
           path="/admin"
           element={
@@ -75,12 +72,12 @@ export default function App() {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<AdminHome />} />
           <Route path="households" element={<AdminHouseholds />} />
-          <Route path="households/:householdId" element={<HouseholdView />} />
+          <Route path="households/:householdId" element={<AdminHouseholdView />} />
           <Route path="analytics" element={<AdminAnalytics />} />
           <Route path="reports" element={<AdminReports />} />
         </Route>
 
-        {/* ✅ USER AREA (Protected + Layout) */}
+        {/* USER AREA */}
         <Route
           path="/user"
           element={
@@ -95,11 +92,14 @@ export default function App() {
           <Route path="notifications" element={<Notifications />} />
           <Route path="settings" element={<Settings />} />
           <Route path="profile" element={<Profile />} />
+
+          {/* household */}
           <Route path="household/new" element={<HouseholdNew />} />
+          <Route path="household/:id" element={<UserHouseholdView />} /> {/* ✅ THIS FIXES VIEW */}
           <Route path="qr/:householdId" element={<QrCode />} />
         </Route>
 
-        {/* ✅ fallback */}
+        {/* fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

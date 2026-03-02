@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { apiFetch } from "../../lib/api";
 
 function StatusBadge({ status }) {
@@ -9,12 +9,9 @@ function StatusBadge({ status }) {
     rejected: "bg-rose-50 text-rose-700 ring-rose-200",
     verified: "bg-emerald-50 text-emerald-700 ring-emerald-200",
   };
+
   return (
-    <span
-      className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-extrabold ring-1 ${
-        map[status] || ""
-      }`}
-    >
+    <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-extrabold ring-1 ${map[status] || ""}`}>
       <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
       {(status || "n/a").toUpperCase()}
     </span>
@@ -23,11 +20,13 @@ function StatusBadge({ status }) {
 
 export default function HouseholdView() {
   const { id } = useParams();
+  const navigate = useNavigate();
+
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
-  // request states
+  // request states (for verified only)
   const [reqType, setReqType] = useState("delete_member");
   const [memberIndex, setMemberIndex] = useState(0);
   const [note, setNote] = useState("");
@@ -43,10 +42,10 @@ export default function HouseholdView() {
     disabilityDetail: "",
   });
 
-  const canEdit = useMemo(() => {
-    // can edit until verified
-    return item && item.status !== "verified";
-  }, [item]);
+  const canEdit = useMemo(() => item && item.status !== "verified", [item]);
+
+  // ✅ allow delete until verified
+  const canDelete = useMemo(() => item && item.status !== "verified", [item]);
 
   const load = async () => {
     try {
@@ -66,21 +65,27 @@ export default function HouseholdView() {
     // eslint-disable-next-line
   }, [id]);
 
+  const handleDeleteHousehold = async () => {
+    const ok = window.confirm("Do you really want to delete this household form?");
+    if (!ok) return;
+
+    try {
+      setErr("");
+      await apiFetch(`/api/households/${id}`, { method: "DELETE" });
+      navigate("/user/forms");
+    } catch (e) {
+      setErr(e.message);
+    }
+  };
+
   const sendRequest = async () => {
     try {
       setErr("");
+
       const payload =
         reqType === "delete_member"
-          ? {
-              type: "delete_member",
-              memberIndex: Number(memberIndex),
-              note,
-            }
-          : {
-              type: "add_newborn",
-              newborn,
-              note,
-            };
+          ? { type: "delete_member", memberIndex: Number(memberIndex), note }
+          : { type: "add_newborn", newborn, note };
 
       await apiFetch(`/api/households/${id}/change-requests`, {
         method: "POST",
@@ -95,26 +100,17 @@ export default function HouseholdView() {
     }
   };
 
-  if (loading)
-    return (
-      <div className="p-10 text-center font-extrabold text-black/60">
-        Loading...
-      </div>
-    );
+  if (loading) {
+    return <div className="p-10 text-center font-extrabold text-black/60">Loading...</div>;
+  }
 
-  if (err)
-    return (
-      <div className="p-6 bg-rose-50 text-rose-700 font-bold rounded-2xl">
-        {err}
-      </div>
-    );
+  if (err) {
+    return <div className="p-6 bg-rose-50 text-rose-700 font-bold rounded-2xl">{err}</div>;
+  }
 
-  if (!item)
-    return (
-      <div className="p-10 text-center text-black/60 font-semibold">
-        Not found
-      </div>
-    );
+  if (!item) {
+    return <div className="p-10 text-center text-black/60 font-semibold">Not found</div>;
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -122,9 +118,7 @@ export default function HouseholdView() {
       <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl sm:text-3xl font-extrabold">
-              Household #{item.householdId}
-            </h1>
+            <h1 className="text-2xl sm:text-3xl font-extrabold">Household #{item.householdId}</h1>
             <StatusBadge status={item.status} />
           </div>
           <p className="text-black/60 font-medium mt-1">
@@ -152,15 +146,28 @@ export default function HouseholdView() {
         </div>
       </div>
 
+      {/* ✅ Delete section (until verified) */}
+      {canDelete && (
+        <div className="rounded-3xl border border-rose-200 bg-rose-50 p-6">
+          <div className="font-extrabold text-rose-700 text-lg">Delete household</div>
+          <div className="text-rose-700/80 mt-1 font-medium">
+            You can delete this form before admin verification.
+          </div>
+
+          <button
+            onClick={handleDeleteHousehold}
+            className="mt-4 rounded-2xl px-5 py-3 font-extrabold bg-rose-600 text-white hover:bg-rose-700 transition"
+          >
+            Delete this household
+          </button>
+        </div>
+      )}
+
       {/* Rejected reason */}
       {item.status === "rejected" && (
         <div className="rounded-3xl border border-rose-200 bg-rose-50 p-5">
-          <div className="font-extrabold text-rose-700">
-            Rejected reason
-          </div>
-          <div className="text-rose-700/80 mt-1">
-            {item.rejectionReason || "-"}
-          </div>
+          <div className="font-extrabold text-rose-700">Rejected reason</div>
+          <div className="text-rose-700/80 mt-1">{item.rejectionReason || "-"}</div>
         </div>
       )}
 
@@ -176,9 +183,12 @@ export default function HouseholdView() {
 
           <div className="rounded-2xl border p-4">
             <div className="text-black/60 font-bold text-sm">Address</div>
-            <div className="font-extrabold text-lg">
-              {item.address || "-"}
-            </div>
+            <div className="font-extrabold text-lg">{item.address || "-"}</div>
+          </div>
+
+          <div className="rounded-2xl border p-4 sm:col-span-2">
+            <div className="text-black/60 font-bold text-sm">Citizenship No</div>
+            <div className="font-extrabold text-lg">{item.citizenshipNo || "-"}</div>
           </div>
         </div>
       </div>
@@ -195,9 +205,7 @@ export default function HouseholdView() {
                   <div className="font-extrabold text-lg">
                     {idx + 1}. {m.name || "-"}
                   </div>
-                  <div className="text-black/60 font-bold text-sm">
-                    Age: {m.age ?? "-"}
-                  </div>
+                  <div className="text-black/60 font-bold text-sm">Age: {m.age ?? "-"}</div>
                 </div>
 
                 <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm font-semibold text-black/70">
@@ -206,10 +214,7 @@ export default function HouseholdView() {
                   <div>Education: {m.education || "-"}</div>
                   <div>Occupation: {m.occupation || "-"}</div>
                   <div className="sm:col-span-2">
-                    Disability:{" "}
-                    {m.disability
-                      ? `Yes (${m.disabilityDetail || "-"})`
-                      : "No"}
+                    Disability: {m.disability ? `Yes (${m.disabilityDetail || "-"})` : "No"}
                   </div>
                 </div>
               </div>
@@ -227,21 +232,11 @@ export default function HouseholdView() {
         {item.documents?.length ? (
           <div className="space-y-2">
             {item.documents.map((d, i) => (
-              <div
-                key={i}
-                className="rounded-2xl border p-4 flex items-center justify-between gap-4"
-              >
-                <div>
-                  <div className="font-extrabold">{d.type}</div>
-                  <a
-                    className="text-blue-700 underline break-all"
-                    href={d.url}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {d.url}
-                  </a>
-                </div>
+              <div key={i} className="rounded-2xl border p-4">
+                <div className="font-extrabold">{d.type}</div>
+                <a className="text-blue-700 underline break-all" href={d.url} target="_blank" rel="noreferrer">
+                  {d.url}
+                </a>
               </div>
             ))}
           </div>
@@ -253,9 +248,7 @@ export default function HouseholdView() {
       {/* Requests (only after verified) */}
       {item.status === "verified" && (
         <div className="rounded-3xl bg-white border shadow-sm p-6 space-y-4">
-          <div className="font-extrabold text-lg">
-            Request changes (after verified)
-          </div>
+          <div className="font-extrabold text-lg">Request changes (after verified)</div>
           <div className="text-black/60 font-medium">
             After verification you cannot edit. You can request admin.
           </div>
@@ -284,7 +277,6 @@ export default function HouseholdView() {
             </button>
           </div>
 
-          {/* Delete member */}
           {reqType === "delete_member" && (
             <div className="rounded-3xl border p-5 space-y-3">
               <div className="font-extrabold">Delete member request</div>
@@ -312,7 +304,6 @@ export default function HouseholdView() {
             </div>
           )}
 
-          {/* Add newborn */}
           {reqType === "add_newborn" && (
             <div className="rounded-3xl border p-5 space-y-4">
               <div className="font-extrabold">Add newborn request</div>
@@ -323,9 +314,7 @@ export default function HouseholdView() {
                   <input
                     className="mt-2 rounded-2xl border p-3 w-full"
                     value={newborn.name}
-                    onChange={(e) =>
-                      setNewborn((p) => ({ ...p, name: e.target.value }))
-                    }
+                    onChange={(e) => setNewborn((p) => ({ ...p, name: e.target.value }))}
                     placeholder="newborn name"
                   />
                 </div>
@@ -336,12 +325,7 @@ export default function HouseholdView() {
                     type="number"
                     className="mt-2 rounded-2xl border p-3 w-full"
                     value={newborn.age}
-                    onChange={(e) =>
-                      setNewborn((p) => ({
-                        ...p,
-                        age: Number(e.target.value),
-                      }))
-                    }
+                    onChange={(e) => setNewborn((p) => ({ ...p, age: Number(e.target.value) }))}
                     placeholder="0"
                   />
                 </div>
@@ -351,9 +335,7 @@ export default function HouseholdView() {
                   <select
                     className="mt-2 rounded-2xl border p-3 w-full"
                     value={newborn.gender}
-                    onChange={(e) =>
-                      setNewborn((p) => ({ ...p, gender: e.target.value }))
-                    }
+                    onChange={(e) => setNewborn((p) => ({ ...p, gender: e.target.value }))}
                   >
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
@@ -362,18 +344,11 @@ export default function HouseholdView() {
                 </div>
 
                 <div>
-                  <label className="font-extrabold text-sm">
-                    Marital Status
-                  </label>
+                  <label className="font-extrabold text-sm">Marital Status</label>
                   <select
                     className="mt-2 rounded-2xl border p-3 w-full"
                     value={newborn.maritalStatus}
-                    onChange={(e) =>
-                      setNewborn((p) => ({
-                        ...p,
-                        maritalStatus: e.target.value,
-                      }))
-                    }
+                    onChange={(e) => setNewborn((p) => ({ ...p, maritalStatus: e.target.value }))}
                   >
                     <option value="Single">Single</option>
                     <option value="Married">Married</option>
