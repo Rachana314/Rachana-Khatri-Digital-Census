@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { uploadDoc } from "../../lib/upload";
 
+
+
 export default function HouseholdNew() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -19,6 +21,13 @@ export default function HouseholdNew() {
     ],
     [t]
   );
+
+  const isValidNepalCitizenship = (v) => {
+  const s = String(v || "").trim().toUpperCase().replace(/\s+/g, "");
+  const r1 = /^\d{1,3}[-/]\d{1,3}[-/]\d{1,8}$/;
+  const r2 = /^\d{1,3}[-/]\d{1,3}[-/]\d{1,8}[-/]\d{1,4}$/;
+  return r1.test(s) || r2.test(s);
+};
 
   const [step, setStep] = useState(0);
   const [householdId, setHouseholdId] = useState(null);

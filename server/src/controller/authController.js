@@ -6,27 +6,30 @@ import { USER, ADMIN } from "../constants/roles.js";
 import * as authService from "../services/authService.js";
 
 const signToken = (user) => {
-  return jwt.sign(
-    { id: user._id, roles: user.roles },
-    config.jwtSecret,
-    { expiresIn: config.jwtExpiresIn || "7d" }
-  );
+  return jwt.sign({ id: user._id, roles: user.roles }, config.jwtSecret, {
+    expiresIn: config.jwtExpiresIn || "7d",
+  });
 };
 
 // 🟢 USER REGISTER (SECURE: cannot self-assign ADMIN)
 export const register = async (req, res) => {
   try {
-    const { name, email, password, profileImageUrl } = req.body;
+    const { name, email, phone, password, profileImageUrl } = req.body;
 
     if (!name?.trim()) return res.status(400).json({ msg: "Name is required" });
     if (!email?.trim()) return res.status(400).json({ msg: "Email is required" });
+    if (!phone?.trim()) return res.status(400).json({ msg: "Phone is required" });
     if (!password || password.length < 8)
       return res.status(400).json({ msg: "Password must be at least 8 characters" });
 
     const normalizedEmail = email.trim().toLowerCase();
+    const normalizedPhone = phone.trim();
 
     const exists = await User.findOne({ email: normalizedEmail });
     if (exists) return res.status(409).json({ msg: "Email already registered" });
+
+    const phoneExists = await User.findOne({ phone: normalizedPhone });
+    if (phoneExists) return res.status(409).json({ msg: "Phone already registered" });
 
     const hashed = await bcrypt.hash(password, 10);
 
@@ -34,6 +37,7 @@ export const register = async (req, res) => {
     const user = await User.create({
       name: name.trim(),
       email: normalizedEmail,
+      phone: normalizedPhone,
       password: hashed,
       roles: [USER],
       profileImageUrl: profileImageUrl?.trim() || "",
@@ -51,6 +55,7 @@ export const register = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         roles: user.roles,
         isVerified: user.isVerified,
       },
@@ -75,9 +80,7 @@ export const login = async (req, res) => {
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) return res.status(401).json({ msg: "Invalid credentials" });
 
-    if (!user.isVerified) {
-      return res.status(403).json({ msg: "Please verify your email first" });
-    }
+    if (!user.isVerified) return res.status(403).json({ msg: "Please verify your email first" });
 
     const token = signToken(user);
 
@@ -88,6 +91,7 @@ export const login = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         roles: user.roles,
         profileImageUrl: user.profileImageUrl,
         isVerified: user.isVerified,
@@ -135,7 +139,7 @@ export const verifyEmailOtp = async (req, res) => {
   }
 };
 
-// ✅ ADMIN REGISTER (simple + working)
+// ✅ ADMIN REGISTER (no phone required)
 export const adminRegister = async (req, res) => {
   try {
     const { name, email, password, profileImageUrl } = req.body;
@@ -152,10 +156,10 @@ export const adminRegister = async (req, res) => {
 
     const hashed = await bcrypt.hash(password, 10);
 
-    // ✅ Admin created as verified, and role is ADMIN
     const admin = await User.create({
       name: name.trim(),
       email: normalizedEmail,
+      phone: `ADMIN-${Date.now()}`, // ✅ dummy unique phone for admin
       password: hashed,
       roles: [ADMIN],
       profileImageUrl: profileImageUrl?.trim() || "",
@@ -181,7 +185,7 @@ export const adminRegister = async (req, res) => {
   }
 };
 
-// ✅ ADMIN LOGIN (only admin accounts allowed)
+// ✅ ADMIN LOGIN
 export const adminLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -198,10 +202,7 @@ export const adminLogin = async (req, res) => {
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) return res.status(401).json({ msg: "Invalid credentials" });
 
-    // Optional (admins are created verified anyway)
-    if (!user.isVerified) {
-      return res.status(403).json({ msg: "Admin email not verified" });
-    }
+    if (!user.isVerified) return res.status(403).json({ msg: "Admin email not verified" });
 
     const token = signToken(user);
 
