@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const MemberSchema = new mongoose.Schema(
   {
-    name: { type: String, default: "" },
+    name: { type: String, required: true },
     age: { type: Number, default: null },
     gender: { type: String, enum: ["Male", "Female", "Other"], default: "Male" },
     maritalStatus: { type: String, default: "Single" },
@@ -16,43 +16,15 @@ const MemberSchema = new mongoose.Schema(
 
 const DocumentSchema = new mongoose.Schema(
   {
-    type: {
-      type: String,
-      enum: ["Citizenship", "Birth Certificate", "License"],
-      required: true,
-    },
+    type: { type: String, default: "Photo" },
     url: { type: String, required: true },
+    hash: { type: String, default: "" },
+    originalName: { type: String, default: "" },
+    mime: { type: String, default: "" },
+    size: { type: Number, default: 0 },
   },
   { _id: false }
 );
-
-// ✅ normalize
-function normalizeCitizenship(v) {
-  return String(v || "").trim().toUpperCase().replace(/\s+/g, "");
-}
-
-// ✅ Nepal citizenship format checker (simple + strict)
-function isValidNepalCitizenship(v) {
-  const s = normalizeCitizenship(v);
-
-  // only digits + '-' + '/'
-  if (!/^[0-9/-]+$/.test(s)) return false;
-
-  // Examples:
-  // 12-01-12345
-  // 12/01/12345
-  // 12-01-12345/066
-  // 12/01/12345/066
-  const r1 = /^\d{1,3}[-/]\d{1,3}[-/]\d{1,8}$/;
-  const r2 = /^\d{1,3}[-/]\d{1,3}[-/]\d{1,8}[-/]\d{1,4}$/;
-
-  if (!(r1.test(s) || r2.test(s))) return false;
-
-  // length safety
-  if (s.length < 8 || s.length > 25) return false;
-
-  return true;
-}
 
 const HouseholdSchema = new mongoose.Schema(
   {
@@ -68,18 +40,6 @@ const HouseholdSchema = new mongoose.Schema(
 
     ward: { type: String, required: true },
     address: { type: String, required: true },
-
-    citizenshipNo: {
-      type: String,
-      required: true,
-      unique: true,
-      index: true,
-      validate: {
-        validator: (v) => isValidNepalCitizenship(v),
-        message:
-          "Invalid citizenship number. Example: 12-01-12345 or 12-01-12345/066",
-      },
-    },
 
     members: { type: [MemberSchema], default: [] },
     documents: { type: [DocumentSchema], default: [] },
@@ -101,12 +61,12 @@ const HouseholdSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-HouseholdSchema.pre("validate", function () {
-  if (this.citizenshipNo) this.citizenshipNo = normalizeCitizenship(this.citizenshipNo);
+HouseholdSchema.index({ "documents.hash": 1 }, { unique: true, sparse: true });
 
+HouseholdSchema.pre("validate", function () {
   if (!this.householdId) {
-    const rand = Math.floor(100000 + Math.random() * 900000);
-    this.householdId = `HH-${Date.now()}-${rand}`;
+    const rand = Math.floor(10000 + Math.random() * 90000);
+    this.householdId = `HH-${rand}`;
   }
 });
 

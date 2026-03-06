@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 const API = import.meta.env.VITE_API_URL;
 
 function getToken() {
@@ -23,3 +24,41 @@ export async function apiFetch(path, options = {}) {
   }
   return res.json();
 }
+=======
+const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+export async function apiFetch(path, options = {}) {
+  const token = localStorage.getItem("token");
+
+  const headers = {
+    ...(options.headers || {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+
+  // Only set JSON header when NOT sending FormData and when body exists
+  const isForm = options.body instanceof FormData;
+  if (!isForm && options.body !== undefined && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  const res = await fetch(`${API}${path}`, {
+    ...options,
+    headers,
+    credentials: "include", // ✅ IMPORTANT
+  });
+
+  const raw = await res.text();
+  let data = {};
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch {
+    data = { message: raw };
+  }
+
+  if (!res.ok) {
+    throw new Error(data.message || data.msg || `Request failed (${res.status})`);
+  }
+
+  return data;
+}
+>>>>>>> 32bdc4b2bf581f7c68974fba7032ea87fb04d0bc

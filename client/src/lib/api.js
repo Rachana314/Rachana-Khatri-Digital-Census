@@ -3,17 +3,23 @@ const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 export async function apiFetch(path, options = {}) {
   const token = localStorage.getItem("token");
 
+  const headers = {
+    ...(options.headers || {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+
+  // Only set JSON header when NOT sending FormData and when body exists
+  const isForm = options.body instanceof FormData;
+  if (!isForm && options.body !== undefined && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
+
   const res = await fetch(`${API}${path}`, {
     ...options,
-    headers: {
-      ...(options.headers || {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      // Only set JSON header when we actually send JSON
-      ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
-    },
+    headers,
+    credentials: "include", // ✅ IMPORTANT
   });
 
-  // ✅ Always read raw text first so we can handle HTML/plain text errors too
   const raw = await res.text();
   let data = {};
   try {

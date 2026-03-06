@@ -2,46 +2,45 @@ import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import Household from "../models/Household.js";
 
-// get my profile + my household form summary
 export async function getMe(req, res) {
   try {
     const user = await User.findById(req.user._id).select("-password");
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // user can only have 1 household, so fetch one
     const household = await Household.findOne({ user: req.user._id })
       .select("householdId status createdAt updatedAt rejectionReason")
       .sort({ updatedAt: -1 });
 
-    return res.json({
-      user,
-      household: household || null,
-    });
+    return res.json({ user, household: household || null });
   } catch (e) {
     return res.status(500).json({ message: e.message || "Failed to load profile" });
   }
 }
 
-// update basic profile info
 export async function updateMe(req, res) {
   try {
-    const { fullName, phone, address } = req.body;
+    const { name, phone } = req.body;
 
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (fullName !== undefined) user.fullName = fullName;
-    if (phone !== undefined) user.phone = phone;
-    if (address !== undefined) user.address = address;
+    if (name !== undefined) user.name = String(name).trim();
+    if (phone !== undefined) user.phone = String(phone).trim();
 
     await user.save();
-    return res.json({ message: "Profile updated", user: user.toObject({ getters: true }) });
+
+    const safe = user.toObject();
+    delete safe.password;
+
+    return res.json({ message: "Profile updated", user: safe });
   } catch (e) {
+    if (e?.code === 11000 && e.keyPattern?.phone) {
+      return res.status(409).json({ message: "Phone number already in use" });
+    }
     return res.status(500).json({ message: e.message || "Failed to update profile" });
   }
 }
 
-// change password
 export async function changePassword(req, res) {
   try {
     const { oldPassword, newPassword } = req.body;
@@ -62,7 +61,6 @@ export async function changePassword(req, res) {
 
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(newPassword, salt);
-
     await user.save();
 
     return res.json({ message: "Password changed successfully" });
@@ -71,18 +69,21 @@ export async function changePassword(req, res) {
   }
 }
 
-// upload profile photo (avatar)
 export async function uploadAvatar(req, res) {
   try {
     if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
-    const user = await User.findById(req.user._id);
+    const url = `http://localhost:5000/uploads/${req.file.filename}`;
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: { profileImageUrl: url } },
+      { new: true }
+    ).select("-password");
+
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    user.avatarUrl = `http://localhost:5000/uploads/${req.file.filename}`;
-    await user.save();
-
-    return res.json({ message: "Avatar updated", avatarUrl: user.avatarUrl });
+    return res.json({ message: "Avatar updated", profileImageUrl: user.profileImageUrl, user });
   } catch (e) {
     return res.status(500).json({ message: e.message || "Failed to upload avatar" });
   }

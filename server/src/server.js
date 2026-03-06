@@ -10,6 +10,7 @@ import householdRoutes from "./routes/householdRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import citizenshipRoutes from "./routes/citizenshipRoutes.js";
 connectDB();
 
 const app = express();
@@ -34,6 +35,7 @@ app.use("/api/households", householdRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/citizenship", citizenshipRoutes);
 
 app.get("/", (req, res) => res.send("API Running"));
 
