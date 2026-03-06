@@ -2,224 +2,170 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import config from "../config/config.js";
-import { USER, ADMIN } from "../constants/roles.js";
-import * as authService from "../services/authService.js";
+import {
+  generateEmailOtp as generateEmailOtpService,
+  verifyEmailOtp as verifyEmailOtpService,
+  forgotPassword as forgotPasswordService,
+  resetPassword as resetPasswordService,
+} from "../services/authService.js";
 
-const signToken = (user) => {
-  return jwt.sign({ id: user._id, roles: user.roles }, config.jwtSecret, {
-    expiresIn: config.jwtExpiresIn || "7d",
-  });
-};
+function buildUserResponse(user) {
+  return {
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    roles: user.roles,
+    profileImageUrl: user.profileImageUrl,
+    isVerified: user.isVerified,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
+}
 
-// 🟢 USER REGISTER (SECURE: cannot self-assign ADMIN)
-export const register = async (req, res) => {
+function createToken(user) {
+  return jwt.sign(
+    {
+      userId: user._id,
+      email: user.email,
+      roles: user.roles,
+    },
+    config.jwtSecret,
+    { expiresIn: config.jwtExpiresIn }
+  );
+}
+
+export async function register(req, res, next) {
   try {
-    const { name, email, phone, password, profileImageUrl } = req.body;
+    const { name, email, phone, password, roles } = req.body;
 
-    if (!name?.trim()) return res.status(400).json({ msg: "Name is required" });
-    if (!email?.trim()) return res.status(400).json({ msg: "Email is required" });
-    if (!phone?.trim()) return res.status(400).json({ msg: "Phone is required" });
-    if (!password || password.length < 8)
-      return res.status(400).json({ msg: "Password must be at least 8 characters" });
+    if (!name || !email || !phone || !password) {
+      return res.status(400).json({
+        message: "Name, email, phone, and password are required",
+      });
+    }
 
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedPhone = phone.trim();
 
-    const exists = await User.findOne({ email: normalizedEmail });
-    if (exists) return res.status(409).json({ msg: "Email already registered" });
+    const existingEmail = await User.findOne({ email: normalizedEmail });
+    if (existingEmail) {
+      return res.status(400).json({
+        message: "Email already registered",
+      });
+    }
 
-    const phoneExists = await User.findOne({ phone: normalizedPhone });
-    if (phoneExists) return res.status(409).json({ msg: "Phone already registered" });
+    const existingPhone = await User.findOne({ phone: normalizedPhone });
+    if (existingPhone) {
+      return res.status(400).json({
+        message: "Phone already registered",
+      });
+    }
 
-    const hashed = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ✅ Always USER role for normal register
     const user = await User.create({
       name: name.trim(),
       email: normalizedEmail,
       phone: normalizedPhone,
-      password: hashed,
-      roles: [USER],
-      profileImageUrl: profileImageUrl?.trim() || "",
-      isVerified: false,
+      password: hashedPassword,
+      roles:
+        Array.isArray(roles) && roles.length > 0 ? roles : undefined,
     });
-
-    // 🔹 Send OTP after register
-    const otpResult = await authService.generateEmailOtp(user.email);
 
     return res.status(201).json({
-      success: true,
-      msg: "Registered successfully. OTP sent to email.",
-      ...(otpResult.devOtp ? { devOtp: otpResult.devOtp } : {}),
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        roles: user.roles,
-        isVerified: user.isVerified,
-      },
+      message: "Registration successful. Please verify your email with OTP.",
+      user: buildUserResponse(user),
     });
   } catch (err) {
-    console.error("Register error:", err);
-    return res.status(500).json({ msg: err.message || "Server error" });
+    next(err);
   }
-};
+}
 
-// 🔵 USER LOGIN
-export const login = async (req, res) => {
+export async function login(req, res, next) {
   try {
     const { email, password } = req.body;
 
-    if (!email?.trim()) return res.status(400).json({ msg: "Email is required" });
-    if (!password) return res.status(400).json({ msg: "Password is required" });
-
-    const user = await User.findOne({ email: email.trim().toLowerCase() });
-    if (!user) return res.status(401).json({ msg: "Invalid credentials" });
-
-    const ok = await bcrypt.compare(password, user.password);
-    if (!ok) return res.status(401).json({ msg: "Invalid credentials" });
-
-    if (!user.isVerified) return res.status(403).json({ msg: "Please verify your email first" });
-
-    const token = signToken(user);
-
-    return res.status(200).json({
-      msg: "Login successful",
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        roles: user.roles,
-        profileImageUrl: user.profileImageUrl,
-        isVerified: user.isVerified,
-      },
-    });
-  } catch (err) {
-    console.error("Login error:", err);
-    return res.status(500).json({ msg: err.message || "Server error" });
-  }
-};
-
-// 🟡 REQUEST OTP AGAIN
-export const generateEmailOtp = async (req, res) => {
-  try {
-    const { email } = req.body;
-    const result = await authService.generateEmailOtp(email);
-
-    return res.status(200).json({
-      success: true,
-      message: result.message,
-      ...(result.devOtp ? { devOtp: result.devOtp } : {}),
-    });
-  } catch (error) {
-    console.error("OTP error:", error);
-    return res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || "Server error",
-    });
-  }
-};
-
-// 🟣 VERIFY OTP
-export const verifyEmailOtp = async (req, res) => {
-  try {
-    const { email, verificationCode } = req.body;
-    const result = await authService.verifyEmailOtp(email, verificationCode);
-
-    return res.status(200).json({ success: true, message: result.message });
-  } catch (error) {
-    console.error("Verify OTP error:", error);
-    return res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || "Server error",
-    });
-  }
-};
-
-// ✅ ADMIN REGISTER (no phone required)
-export const adminRegister = async (req, res) => {
-  try {
-    const { name, email, password, profileImageUrl } = req.body;
-
-    if (!name?.trim()) return res.status(400).json({ msg: "Name is required" });
-    if (!email?.trim()) return res.status(400).json({ msg: "Email is required" });
-    if (!password || password.length < 8)
-      return res.status(400).json({ msg: "Password must be at least 8 characters" });
+    if (!email || !password) {
+      return res.status(400).json({
+        message: "Email and password are required",
+      });
+    }
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    const exists = await User.findOne({ email: normalizedEmail });
-    if (exists) return res.status(409).json({ msg: "Email already registered" });
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user) {
+      return res.status(401).json({
+        message: "Invalid email or password",
+      });
+    }
 
-    const hashed = await bcrypt.hash(password, 10);
+    const isPasswordMatched = await bcrypt.compare(password, user.password);
+    if (!isPasswordMatched) {
+      return res.status(401).json({
+        message: "Invalid email or password",
+      });
+    }
 
-    const admin = await User.create({
-      name: name.trim(),
-      email: normalizedEmail,
-      phone: `ADMIN-${Date.now()}`, // ✅ dummy unique phone for admin
-      password: hashed,
-      roles: [ADMIN],
-      profileImageUrl: profileImageUrl?.trim() || "",
-      isVerified: true,
-    });
+    if (!user.isVerified) {
+      return res.status(403).json({
+        message: "Please verify your email first",
+      });
+    }
 
-    const token = signToken(admin);
-
-    return res.status(201).json({
-      msg: "Admin registered successfully",
-      token,
-      user: {
-        id: admin._id,
-        name: admin.name,
-        email: admin.email,
-        roles: admin.roles,
-        isVerified: admin.isVerified,
-      },
-    });
-  } catch (err) {
-    console.error("Admin register error:", err);
-    return res.status(500).json({ msg: err.message || "Server error" });
-  }
-};
-
-// ✅ ADMIN LOGIN
-export const adminLogin = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    if (!email?.trim()) return res.status(400).json({ msg: "Email is required" });
-    if (!password) return res.status(400).json({ msg: "Password is required" });
-
-    const user = await User.findOne({ email: email.trim().toLowerCase() });
-    if (!user) return res.status(401).json({ msg: "Invalid credentials" });
-
-    const isAdmin = user.roles?.includes(ADMIN);
-    if (!isAdmin) return res.status(403).json({ msg: "Not an admin account" });
-
-    const ok = await bcrypt.compare(password, user.password);
-    if (!ok) return res.status(401).json({ msg: "Invalid credentials" });
-
-    if (!user.isVerified) return res.status(403).json({ msg: "Admin email not verified" });
-
-    const token = signToken(user);
+    const token = createToken(user);
 
     return res.status(200).json({
-      msg: "Admin login successful",
+      message: "Login successful",
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        roles: user.roles,
-        profileImageUrl: user.profileImageUrl,
-        isVerified: user.isVerified,
-      },
+      user: buildUserResponse(user),
     });
   } catch (err) {
-    console.error("Admin login error:", err);
-    return res.status(500).json({ msg: err.message || "Server error" });
+    next(err);
   }
-};
+}
+
+export async function generateEmailOtp(req, res, next) {
+  try {
+    const result = await generateEmailOtpService(req.body.email);
+    return res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function verifyEmailOtp(req, res, next) {
+  try {
+    const result = await verifyEmailOtpService(
+      req.body.email,
+      req.body.verificationCode
+    );
+    return res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function forgotPassword(req, res, next) {
+  try {
+    const result = await forgotPasswordService(req.body.email);
+    return res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function resetPassword(req, res, next) {
+  try {
+    const result = await resetPasswordService(
+      req.body.email,
+      req.body.otp,
+      req.body.newPassword,
+      req.body.confirmPassword
+    );
+    return res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+}

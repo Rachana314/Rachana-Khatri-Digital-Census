@@ -1,9 +1,10 @@
 import dotenv from "dotenv";
+
 dotenv.config();
 
 const config = {
-  appUrl: process.env.APP_URL || "http://localhost:5000",
-  port: process.env.PORT || 5000,
+  appUrl: process.env.APP_URL || "http://localhost:5173",
+  port: Number(process.env.PORT) || 8000,
 
   mongoDBUrl: process.env.MONGO_URI || "",
 
@@ -13,7 +14,6 @@ const config = {
   jwtSecret: process.env.JWT_SECRET || "",
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
 
-
   smtpEmail: process.env.SMTP_EMAIL || "",
   smtpPassword: process.env.SMTP_PASSWORD || "",
 
@@ -21,5 +21,13 @@ const config = {
 
   env: process.env.NODE_ENV || "development",
 };
+
+if (!config.mongoDBUrl) {
+  throw new Error("MONGO_URI is missing in .env");
+}
+
+if (!config.jwtSecret) {
+  throw new Error("JWT_SECRET is missing in .env");
+}
 
 export default config;

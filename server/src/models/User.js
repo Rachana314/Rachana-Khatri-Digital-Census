@@ -1,4 +1,3 @@
-// server/src/models/User.js
 import mongoose from "mongoose";
 import { USER, ADMIN } from "../constants/roles.js";
 
@@ -18,18 +17,54 @@ const userSchema = new mongoose.Schema(
       },
     },
 
-    // ✅ phone added (required + unique)
-    phone: { type: String, required: true, trim: true, unique: true },
+    phone: {
+      type: String,
+      required: true,
+      trim: true,
+      unique: true,
+    },
 
-    password: { type: String, required: true, minlength: 8 },
+    password: {
+      type: String,
+      required: true,
+      minlength: 8,
+    },
 
-    roles: { type: [String], default: [USER], enum: [USER, ADMIN] },
+    roles: {
+      type: [String],
+      default: [USER],
+      enum: [USER, ADMIN],
+    },
 
-    profileImageUrl: { type: String, default: "" },
-    isVerified: { type: Boolean, default: false },
+    profileImageUrl: {
+      type: String,
+      default: "",
+    },
 
-    verificationCode: String,
-    verificationCodeExpiryTime: Number,
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+
+    verificationCode: {
+      type: String,
+      default: null,
+    },
+
+    verificationCodeExpiryTime: {
+      type: Number,
+      default: null,
+    },
+
+    resetPasswordCode: {
+      type: String,
+      default: null,
+    },
+
+    resetPasswordCodeExpiryTime: {
+      type: Number,
+      default: null,
+    },
   },
   { timestamps: true }
 );

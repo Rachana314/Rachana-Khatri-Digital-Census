@@ -1,26 +1,31 @@
-const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 
-export async function uploadDoc(householdId, type, file) {
-  const token = localStorage.getItem("token");
-  if (!token) throw new Error("No token found. Please login again.");
+const uploadDir = "uploads";
 
-  const fd = new FormData();
-  fd.append("type", type);
-  fd.append("file", file);
-
-  const res = await fetch(`${API}/api/households/${householdId}/documents`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: fd,
-  });
-
-  const data = await res.json().catch(() => ({}));
-
-  if (!res.ok) {
-    throw new Error(data.message || `Upload failed (${res.status})`);
-  }
-
-  return data; // { message, item }
+// create uploads folder if missing
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
 }
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
+  },
+
+  filename: function (req, file, cb) {
+    const uniqueName =
+      Date.now() + "-" + Math.round(Math.random() * 1e9) +
+      path.extname(file.originalname);
+
+    cb(null, uniqueName);
+  },
+});
+
+export const upload = multer({
+  storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+  },
+});

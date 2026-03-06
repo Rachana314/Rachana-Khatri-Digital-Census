@@ -1,4 +1,4 @@
-const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export async function apiFetch(path, options = {}) {
   const token = localStorage.getItem("token");
@@ -8,7 +8,6 @@ export async function apiFetch(path, options = {}) {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
-  // Only set JSON header when NOT sending FormData and when body exists
   const isForm = options.body instanceof FormData;
   if (!isForm && options.body !== undefined && !headers["Content-Type"]) {
     headers["Content-Type"] = "application/json";
@@ -17,11 +16,12 @@ export async function apiFetch(path, options = {}) {
   const res = await fetch(`${API}${path}`, {
     ...options,
     headers,
-    credentials: "include", // ✅ IMPORTANT
+    credentials: "include",
   });
 
   const raw = await res.text();
   let data = {};
+
   try {
     data = raw ? JSON.parse(raw) : {};
   } catch {

@@ -55,11 +55,14 @@ export default function HouseholdNew() {
     load();
   }, [editId, navigate]);
 
+  const hasPhoto = Array.isArray(documents) && documents.some((doc) => doc?.type === "Photo");
+
   const validateStep = (s) => {
     if (s === 0) {
       if (!household.ward.trim()) throw new Error("Ward is required.");
       if (!household.address.trim()) throw new Error("Address is required.");
     }
+
     if (s === 1) {
       if (members.length === 0) throw new Error("Add at least one member.");
       for (let i = 0; i < members.length; i++) {
@@ -68,8 +71,9 @@ export default function HouseholdNew() {
         }
       }
     }
+
     if (s === 2) {
-      if (documents.length === 0) throw new Error("Upload at least one photo.");
+      if (!hasPhoto) throw new Error("Upload at least one photo.");
     }
   };
 
@@ -83,7 +87,9 @@ export default function HouseholdNew() {
       documents,
     };
 
-    if (!payload.ward || !payload.address) throw new Error("Ward and address are required.");
+    if (!payload.ward || !payload.address) {
+      throw new Error("Ward and address are required.");
+    }
 
     if (!householdId) {
       const created = await apiFetch("/api/households", {
@@ -112,10 +118,14 @@ export default function HouseholdNew() {
     try {
       validateStep(step);
       setSaving(true);
-      if (step < steps.length - 1) await saveDraft();
+
+      if (step < steps.length - 1) {
+        await saveDraft();
+      }
+
       setStep((x) => Math.min(x + 1, steps.length - 1));
     } catch (e) {
-      setError(e.message);
+      setError(e.message || "Something went wrong");
     } finally {
       setSaving(false);
     }
@@ -128,11 +138,22 @@ export default function HouseholdNew() {
     setError("");
 
     const name = memberDraft.name.trim();
-    if (!name) return setError("Member name is required.");
+    if (!name) {
+      setError("Member name is required.");
+      return;
+    }
 
     const age = memberDraft.age === "" ? null : Number(memberDraft.age);
 
-    setMembers((prev) => [...prev, { name, age, gender: memberDraft.gender || "Male" }]);
+    setMembers((prev) => [
+      ...prev,
+      {
+        name,
+        age,
+        gender: memberDraft.gender || "Male",
+      },
+    ]);
+
     setMemberDraft({ name: "", age: "", gender: "Male" });
   };
 
@@ -142,30 +163,35 @@ export default function HouseholdNew() {
   };
 
   const uploadPhoto = async (file) => {
-    if (!canEdit) return;
-    if (!file) return;
+    if (!canEdit || !file) return;
 
     setUploading(true);
     setError("");
 
     try {
       let id = householdId;
-      if (!id) id = await saveDraft();
+
+      if (!id) {
+        id = await saveDraft();
+      }
 
       const res = await uploadDoc(id, "Photo", file);
       const nextDocs = res?.item?.documents;
-      if (!Array.isArray(nextDocs)) throw new Error("Upload did not return documents.");
+
+      if (!Array.isArray(nextDocs)) {
+        throw new Error("Upload did not return documents.");
+      }
+
       setDocuments(nextDocs);
     } catch (e) {
-      setError(e.message);
+      setError(e.message || "Photo upload failed");
     } finally {
       setUploading(false);
     }
   };
 
   const submit = async () => {
-    if (!canEdit) return;
-    if (saving || uploading) return;
+    if (!canEdit || saving || uploading) return;
 
     setSaving(true);
     setError("");
@@ -176,10 +202,14 @@ export default function HouseholdNew() {
       validateStep(2);
 
       const id = householdId || (await saveDraft());
-      await apiFetch(`/api/households/${id}/submit`, { method: "POST" });
+
+      await apiFetch(`/api/households/${id}/submit`, {
+        method: "POST",
+      });
+
       navigate("/user/forms");
     } catch (e) {
-      setError(e.message);
+      setError(e.message || "Submit failed");
     } finally {
       setSaving(false);
     }
@@ -338,15 +368,22 @@ export default function HouseholdNew() {
                   accept="image/*,application/pdf"
                   onChange={(e) => uploadPhoto(e.target.files?.[0])}
                 />
-                {uploading && <div className="mt-2 text-sm font-bold text-black/60">Uploading...</div>}
+                {uploading && (
+                  <div className="mt-2 text-sm font-bold text-black/60">Uploading...</div>
+                )}
               </div>
 
               <div className="space-y-2">
-                {documents.map((d, i) => (
-                  <div key={i} className="rounded-2xl border p-3 text-sm">
-                    {d.originalName || d.url}
-                  </div>
-                ))}
+                {documents.length > 0 ? (
+                  documents.map((d, i) => (
+                    <div key={i} className="rounded-2xl border p-3 text-sm">
+                      <div className="font-bold">{d.type || "Document"}</div>
+                      <div>{d.originalName || d.url}</div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-sm text-black/60 font-semibold">No photo uploaded yet.</div>
+                )}
               </div>
             </div>
           )}
@@ -372,7 +409,7 @@ export default function HouseholdNew() {
                 <div className="font-extrabold mb-2">Photos</div>
                 {documents.map((d, i) => (
                   <div key={i} className="text-sm">
-                    {i + 1}. {d.originalName || d.url}
+                    {i + 1}. {d.type} — {d.originalName || d.url}
                   </div>
                 ))}
               </div>

@@ -52,6 +52,12 @@ const SettingsIcon = () => (
   </Icon>
 );
 
+function withCacheBust(url) {
+  if (!url) return "";
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}t=${Date.now()}`;
+}
+
 export default function UserLayout() {
   const [open, setOpen] = useState(false);
   const [me, setMe] = useState(null);
@@ -69,16 +75,27 @@ export default function UserLayout() {
     const loadUser = () => {
       try {
         const raw = localStorage.getItem("me") || localStorage.getItem("user");
-        setMe(raw ? JSON.parse(raw) : null);
+        const parsed = raw ? JSON.parse(raw) : null;
+
+        if (parsed?.profileImageUrl) {
+          parsed.profileImageUrl = withCacheBust(parsed.profileImageUrl);
+        }
+
+        setMe(parsed);
       } catch {
         setMe(null);
       }
     };
 
     loadUser();
-    window.addEventListener("user-updated", loadUser);
 
-    return () => window.removeEventListener("user-updated", loadUser);
+    window.addEventListener("user-updated", loadUser);
+    window.addEventListener("storage", loadUser);
+
+    return () => {
+      window.removeEventListener("user-updated", loadUser);
+      window.removeEventListener("storage", loadUser);
+    };
   }, []);
 
   const logout = () => {

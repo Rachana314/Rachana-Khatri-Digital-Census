@@ -10,11 +10,14 @@ import HowItWorks from "./pages/public/HowItWorks";
 import News from "./pages/public/News";
 import Contact from "./pages/public/Contact";
 import PrivacyPolicy from "./pages/public/PrivacyPolicy";
+import VerifyHousehold from "./pages/public/VerifyHousehold";
 
 // Auth pages
 import UserRegister from "./pages/user/Register";
 import UserLogin from "./pages/user/Login";
 import VerifyOtp from "./pages/user/VerifyOtp";
+import ForgotPassword from "./pages/user/ForgotPassword";
+import ResetPassword from "./pages/user/ResetPassword";
 import AdminRegister from "./pages/admin/Register";
 import AdminLogin from "./pages/admin/Login";
 
@@ -49,12 +52,15 @@ export default function App() {
           <Route path="/news" element={<News />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/verify/:householdId" element={<VerifyHousehold />} />
         </Route>
 
         <Route element={<AuthLayout />}>
           <Route path="/register" element={<UserRegister />} />
           <Route path="/login" element={<UserLogin />} />
           <Route path="/verify-email" element={<VerifyOtp />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/admin/register" element={<AdminRegister />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/enter" element={<Navigate to="/register" replace />} />
@@ -71,7 +77,10 @@ export default function App() {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<AdminHome />} />
           <Route path="households" element={<AdminHouseholds />} />
-          <Route path="households/:householdId" element={<AdminHouseholdView />} />
+          <Route
+            path="households/:householdId"
+            element={<AdminHouseholdView />}
+          />
           <Route path="analytics" element={<AdminAnalytics />} />
           <Route path="reports" element={<AdminReports />} />
         </Route>

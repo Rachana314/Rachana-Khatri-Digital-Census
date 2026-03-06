@@ -1,12 +1,17 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import QRCode from "react-qr-code";
 import { apiFetch } from "../../lib/api";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const PUBLIC_BASE =
+  import.meta.env.VITE_PUBLIC_BASE_URL || "http://192.168.1.112:5173";
 
 export default function Settings() {
   const navigate = useNavigate();
+
   const [me, setMe] = useState(null);
+  const [household, setHousehold] = useState(null);
 
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -18,26 +23,52 @@ export default function Settings() {
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
 
-  const [household, setHousehold] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState("");
+
+  const bust = (url) => {
+    if (!url) return "";
+    const sep = url.includes("?") ? "&" : "?";
+    return `${url}${sep}t=${Date.now()}`;
+  };
 
   const load = async () => {
     try {
       setErr("");
+
       const data = await apiFetch("/api/users/me");
-      setMe(data.user);
+
+      const nextUser = data?.user
+        ? {
+            ...data.user,
+            profileImageUrl: data.user.profileImageUrl
+              ? bust(data.user.profileImageUrl)
+              : "",
+          }
+        : null;
+
+      setMe(nextUser);
       setHousehold(data.household || null);
 
-      localStorage.setItem("me", JSON.stringify(data.user));
-      localStorage.setItem("user", JSON.stringify(data.user));
-      window.dispatchEvent(new Event("user-updated"));
+      if (nextUser) {
+        localStorage.setItem("me", JSON.stringify(nextUser));
+        localStorage.setItem("user", JSON.stringify(nextUser));
+        window.dispatchEvent(new Event("user-updated"));
+      }
     } catch (e) {
-      setErr(e.message);
+      setErr(e.message || "Failed to load settings");
     }
   };
 
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
 
   const changePass = async () => {
     try {
@@ -60,53 +91,110 @@ export default function Settings() {
       setShowPasswordBox(false);
       setMsg("Password changed successfully.");
     } catch (e) {
-      setErr(e.message);
+      setErr(e.message || "Failed to change password");
     } finally {
       setSavingPassword(false);
     }
   };
 
-  const uploadAvatar = async (file) => {
+  const handleSelectAvatar = (file) => {
+    if (!file) return;
+
+    setErr("");
+    setMsg("");
+
+    if (!file.type.startsWith("image/")) {
+      setErr("Please select an image file.");
+      return;
+    }
+
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
+    const localPreview = URL.createObjectURL(file);
+    setSelectedFile(file);
+    setPreviewUrl(localPreview);
+  };
+
+  const uploadAvatar = async () => {
     try {
       setErr("");
       setMsg("");
       setUploading(true);
 
+      if (!selectedFile) {
+        throw new Error("Please choose a profile photo first.");
+      }
+
       const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("No token found. Please login again.");
+      }
+
       const form = new FormData();
-      form.append("file", file);
+      form.append("file", selectedFile);
 
       const res = await fetch(`${API}/api/users/avatar`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
         body: form,
       });
 
       const raw = await res.text();
       let data = {};
+
       try {
         data = raw ? JSON.parse(raw) : {};
       } catch {
         data = { message: raw };
       }
 
-      if (!res.ok) throw new Error(data.message || "Upload failed");
+      if (!res.ok) {
+        throw new Error(data.message || "Upload failed");
+      }
 
       setMsg("Profile photo updated.");
 
       if (data.user) {
-        setMe(data.user);
-        localStorage.setItem("me", JSON.stringify(data.user));
-        localStorage.setItem("user", JSON.stringify(data.user));
+        const updatedUser = {
+          ...data.user,
+          profileImageUrl: data.user.profileImageUrl
+            ? bust(data.user.profileImageUrl)
+            : "",
+        };
+
+        setMe(updatedUser);
+        localStorage.setItem("me", JSON.stringify(updatedUser));
+        localStorage.setItem("user", JSON.stringify(updatedUser));
         window.dispatchEvent(new Event("user-updated"));
       } else {
         await load();
       }
+
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+
+      setSelectedFile(null);
+      setPreviewUrl("");
     } catch (e) {
-      setErr(e.message);
+      setErr(e.message || "Profile photo upload failed");
     } finally {
       setUploading(false);
     }
+  };
+
+  const cancelPreview = () => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setSelectedFile(null);
+    setPreviewUrl("");
+    setErr("");
+    setMsg("");
   };
 
   const logout = () => {
@@ -117,8 +205,13 @@ export default function Settings() {
     navigate("/login", { replace: true });
   };
 
-  const isVerified = household?.status === "verified";
   const hasHousehold = Boolean(household?.householdId);
+  const qrTargetUrl = hasHousehold
+    ? `${PUBLIC_BASE}/verify/${household.householdId}`
+    : "";
+  const hasQr = Boolean(qrTargetUrl);
+
+  const currentAvatar = previewUrl || me?.profileImageUrl || "";
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -144,22 +237,22 @@ export default function Settings() {
       <div className="rounded-3xl bg-white border shadow-sm p-6 space-y-4">
         <div className="font-extrabold text-lg">Profile Photo</div>
 
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="h-24 w-24 rounded-full border overflow-hidden bg-zinc-100">
-            {me?.profileImageUrl ? (
+        <div className="flex items-center gap-5 flex-wrap">
+          <div className="h-28 w-28 rounded-full overflow-hidden border bg-zinc-100">
+            {currentAvatar ? (
               <img
-                src={me.profileImageUrl}
+                src={currentAvatar}
                 alt="profile"
                 className="h-full w-full object-cover"
               />
             ) : (
-              <div className="h-full w-full flex items-center justify-center font-extrabold text-black/40">
+              <div className="h-full w-full flex items-center justify-center font-extrabold text-black/40 text-2xl">
                 {String(me?.name || "U").charAt(0).toUpperCase()}
               </div>
             )}
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <input
               type="file"
               accept="image/*"
@@ -167,16 +260,40 @@ export default function Settings() {
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
-                uploadAvatar(file);
+                handleSelectAvatar(file);
                 e.target.value = "";
               }}
             />
+
             <div className="text-sm text-black/60 font-medium">
-              Upload a clear profile photo for your account.
+              Choose a clear image, preview it, then click upload.
             </div>
-            {uploading && (
-              <div className="text-black/60 font-bold">Uploading...</div>
+
+            {selectedFile && (
+              <div className="text-sm font-semibold text-black/70">
+                Selected: {selectedFile.name}
+              </div>
             )}
+
+            <div className="flex gap-3 flex-wrap">
+              <button
+                onClick={uploadAvatar}
+                disabled={!selectedFile || uploading}
+                className="rounded-2xl px-5 py-3 font-extrabold bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50 transition"
+              >
+                {uploading ? "Uploading..." : "Upload Photo"}
+              </button>
+
+              {selectedFile && (
+                <button
+                  onClick={cancelPreview}
+                  disabled={uploading}
+                  className="rounded-2xl px-5 py-3 font-extrabold border hover:bg-black/5 disabled:opacity-50 transition"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -251,7 +368,8 @@ export default function Settings() {
       <div className="rounded-3xl bg-white border shadow-sm p-6 space-y-4">
         <div className="font-extrabold text-lg">Verification & QR</div>
         <p className="text-sm text-black/60">
-          Your household QR code will be generated after the household form is verified by the admin.
+          Your household QR code is generated immediately after form submission.
+          When scanned, it shows the real current status of your form.
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -265,26 +383,50 @@ export default function Settings() {
           <div className="rounded-2xl border p-4 bg-zinc-50">
             <div className="text-sm font-bold text-black/50">QR Availability</div>
             <div className="mt-2 text-lg font-extrabold">
-              {isVerified ? "AVAILABLE" : "NOT AVAILABLE YET"}
+              {hasQr ? "AVAILABLE" : "NOT AVAILABLE YET"}
             </div>
           </div>
         </div>
 
         <div className="rounded-2xl border border-dashed p-5 bg-zinc-50">
-          {isVerified ? (
-            <div className="space-y-3">
+          {hasQr ? (
+            <div className="space-y-4">
               <div className="font-extrabold text-emerald-700">
-                Your household has been verified.
+                Your QR code is ready.
               </div>
+
               <div className="text-sm text-black/60">
-                You can now open your QR code and use it for verification and household lookup.
+                This QR code opens the public household status page and always
+                shows the latest form status.
               </div>
-              <button
-                onClick={() => navigate(`/user/qr/${household.householdId}`)}
-                className="rounded-2xl px-5 py-3 font-extrabold bg-orange-500 text-white hover:bg-orange-600 transition"
-              >
-                Open QR Code
-              </button>
+
+              <div className="bg-white p-4 rounded-2xl border inline-block">
+                <QRCode value={qrTargetUrl} size={220} />
+              </div>
+
+              <div className="text-sm font-semibold text-black/70">
+                Household ID: {household.householdId}
+              </div>
+
+              <div className="text-xs text-black/50 break-all">
+                QR target: {qrTargetUrl}
+              </div>
+
+              <div className="flex gap-3 flex-wrap">
+                <button
+                  onClick={() => navigate(`/user/qr/${household.householdId}`)}
+                  className="rounded-2xl px-5 py-3 font-extrabold bg-orange-500 text-white hover:bg-orange-600 transition"
+                >
+                  Open QR Page
+                </button>
+
+                <button
+                  onClick={() => window.open(qrTargetUrl, "_blank")}
+                  className="rounded-2xl px-5 py-3 font-extrabold border hover:bg-black/5 transition"
+                >
+                  Open Public Status Page
+                </button>
+              </div>
             </div>
           ) : hasHousehold ? (
             <div className="space-y-2">
@@ -292,7 +434,8 @@ export default function Settings() {
                 QR code is not available yet.
               </div>
               <div className="text-sm text-black/60">
-                Your QR code will be generated automatically after admin verification.
+                Submit your household form first. After submission, the QR code
+                should appear here automatically.
               </div>
             </div>
           ) : (
@@ -301,7 +444,7 @@ export default function Settings() {
                 No household form found.
               </div>
               <div className="text-sm text-black/60">
-                Create and submit your household form first to continue the verification process.
+                Create and submit your household form first to continue.
               </div>
             </div>
           )}
