@@ -9,8 +9,13 @@ function StatusBadge({ status }) {
     rejected: "bg-rose-50 text-rose-700 ring-rose-200",
     verified: "bg-emerald-50 text-emerald-700 ring-emerald-200",
   };
+
   return (
-    <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-extrabold ring-1 ${map[status] || ""}`}>
+    <span
+      className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-extrabold ring-1 ${
+        map[status] || ""
+      }`}
+    >
       <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
       {(status || "n/a").toUpperCase()}
     </span>
@@ -27,7 +32,8 @@ export default function Profile() {
       setErr("");
       const data = await apiFetch("/api/users/me");
       setUser(data.user);
-      setHousehold(data.household);
+      setHousehold(data.household || null);
+      localStorage.setItem("me", JSON.stringify(data.user));
     } catch (e) {
       setErr(e.message);
     }
@@ -37,15 +43,40 @@ export default function Profile() {
     load();
   }, []);
 
-  if (err) return <div className="p-6 bg-rose-50 text-rose-700 font-bold rounded-2xl">{err}</div>;
-  if (!user) return <div className="p-10 text-center font-extrabold text-black/60">Loading...</div>;
+  useEffect(() => {
+    const syncUser = () => {
+      const raw = localStorage.getItem("me");
+      if (raw) setUser(JSON.parse(raw));
+    };
+
+    window.addEventListener("user-updated", syncUser);
+    return () => window.removeEventListener("user-updated", syncUser);
+  }, []);
+
+  if (err) {
+    return (
+      <div className="p-6 bg-rose-50 text-rose-700 font-bold rounded-2xl">
+        {err}
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="p-10 text-center font-extrabold text-black/60">
+        Loading...
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-3xl font-extrabold">My Profile</h1>
-          <p className="text-black/60 font-medium mt-1">Your details and household form status.</p>
+          <p className="text-black/60 font-medium mt-1">
+            Your details and household form status.
+          </p>
         </div>
 
         <Link
@@ -56,19 +87,24 @@ export default function Profile() {
         </Link>
       </div>
 
-      {/* profile card */}
       <div className="rounded-3xl bg-white border shadow-sm p-6">
         <div className="flex items-center gap-4 flex-wrap">
           <div className="h-24 w-24 rounded-full border overflow-hidden bg-zinc-100">
-            {user.avatarUrl ? (
-              <img src={user.avatarUrl} alt="avatar" className="h-full w-full object-cover" />
+            {user.profileImageUrl ? (
+              <img
+                src={user.profileImageUrl}
+                alt="profile"
+                className="h-full w-full object-cover"
+              />
             ) : (
-              <div className="h-full w-full flex items-center justify-center font-extrabold text-black/40">No</div>
+              <div className="h-full w-full flex items-center justify-center font-extrabold text-black/40">
+                {String(user.name || "U").charAt(0).toUpperCase()}
+              </div>
             )}
           </div>
 
           <div>
-            <div className="text-2xl font-extrabold">{user.fullName || user.name || "User"}</div>
+            <div className="text-2xl font-extrabold">{user.name || "User"}</div>
             <div className="text-black/60 font-semibold">{user.email || "-"}</div>
           </div>
         </div>
@@ -80,13 +116,12 @@ export default function Profile() {
           </div>
 
           <div className="rounded-2xl border p-4">
-            <div className="text-black/60 font-bold text-sm">Address</div>
-            <div className="font-extrabold text-lg">{user.address || "-"}</div>
+            <div className="text-black/60 font-bold text-sm">Email</div>
+            <div className="font-extrabold text-lg">{user.email || "-"}</div>
           </div>
         </div>
       </div>
 
-      {/* household summary */}
       <div className="rounded-3xl bg-white border shadow-sm p-6 space-y-4">
         <div className="font-extrabold text-lg">My Household Form</div>
 
@@ -115,7 +150,9 @@ export default function Profile() {
             {household.status === "rejected" && (
               <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
                 <div className="font-extrabold text-rose-700">Rejected reason</div>
-                <div className="text-rose-700/80 mt-1">{household.rejectionReason || "-"}</div>
+                <div className="text-rose-700/80 mt-1">
+                  {household.rejectionReason || "-"}
+                </div>
               </div>
             )}
 

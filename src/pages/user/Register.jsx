@@ -8,7 +8,7 @@ export default function Register() {
   const [form, setForm] = useState({
     name: "",
     email: "",
-    phone: "", // ✅ added
+    phone: "",
     password: "",
   });
 
@@ -21,13 +21,22 @@ export default function Register() {
     setLoading(true);
 
     try {
-      await apiFetch("/api/auth/register", {
+      const res = await apiFetch("/api/auth/user/register", {
         method: "POST",
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          name: form.name.trim(),
+          email: form.email.trim().toLowerCase(),
+          phone: form.phone.trim(),
+          password: form.password,
+        }),
       });
 
-      alert("Registered! OTP sent to your email.");
-      navigate("/login");
+      alert(res.msg || "Registered! OTP sent to your email.");
+
+      navigate("/verify-email", {
+        replace: true,
+        state: { email: form.email.trim().toLowerCase() },
+      });
     } catch (e) {
       setError(e.message);
     } finally {
@@ -47,7 +56,6 @@ export default function Register() {
       )}
 
       <form onSubmit={submit} className="space-y-4">
-        {/* name */}
         <div>
           <label className="font-extrabold text-sm">Name</label>
           <input
@@ -58,10 +66,10 @@ export default function Register() {
           />
         </div>
 
-        {/* email */}
         <div>
           <label className="font-extrabold text-sm">Email</label>
           <input
+            type="email"
             className="mt-2 w-full border p-3 rounded-2xl"
             placeholder="example@gmail.com"
             value={form.email}
@@ -69,7 +77,6 @@ export default function Register() {
           />
         </div>
 
-        {/* ✅ phone */}
         <div>
           <label className="font-extrabold text-sm">Phone</label>
           <input
@@ -80,7 +87,6 @@ export default function Register() {
           />
         </div>
 
-        {/* password */}
         <div>
           <label className="font-extrabold text-sm">Password</label>
           <input

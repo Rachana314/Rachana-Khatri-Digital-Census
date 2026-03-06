@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FiEye, FiEyeOff } from "react-icons/fi";
+import { apiFetch } from "../../lib/api";
 
 export default function Login() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const location = useLocation();
+
+  const [email, setEmail] = useState(location.state?.email || "");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -12,34 +15,42 @@ export default function Login() {
   const submit = async (e) => {
     e.preventDefault();
 
-    if (!email || !password) return alert("All fields required");
+    if (!email || !password) {
+      alert("All fields required");
+      return;
+    }
 
     try {
       setLoading(true);
 
-      const res = await fetch("http://localhost:5000/api/auth/user/login", {
+      const data = await apiFetch("/api/auth/user/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
           password,
         }),
       });
 
-      const data = await res.json();
-
-      // ❗ Show backend error message properly
-      if (!res.ok) return alert(data.msg || data.message || "Login failed");
-
-      // ✅ Save JWT token
       localStorage.setItem("token", data.token);
 
-      // ✅ Save logged-in user
-      localStorage.setItem("user", JSON.stringify(data.user));
+      if (data.user) {
+        localStorage.setItem("user", JSON.stringify(data.user));
+        localStorage.setItem("me", JSON.stringify(data.user));
+        window.dispatchEvent(new Event("user-updated"));
+      }
 
       navigate("/user/dashboard");
     } catch (err) {
-      alert(err.message || "Server error");
+      const message = err.message || "Login failed";
+
+      if (message.toLowerCase().includes("verify your email")) {
+        navigate("/verify-email", {
+          state: { email: email.trim().toLowerCase() },
+        });
+        return;
+      }
+
+      alert(message);
     } finally {
       setLoading(false);
     }

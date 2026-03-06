@@ -1,158 +1,149 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 import { uploadDoc } from "../../lib/upload";
 
-
-
 export default function HouseholdNew() {
-  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const editId = searchParams.get("edit");
 
-  const steps = useMemo(
-    () => [
-      t("household.steps.info"),
-      t("household.steps.members"),
-      t("household.steps.documents"),
-      t("household.steps.review"),
-    ],
-    [t]
-  );
-
-  const isValidNepalCitizenship = (v) => {
-  const s = String(v || "").trim().toUpperCase().replace(/\s+/g, "");
-  const r1 = /^\d{1,3}[-/]\d{1,3}[-/]\d{1,8}$/;
-  const r2 = /^\d{1,3}[-/]\d{1,3}[-/]\d{1,8}[-/]\d{1,4}$/;
-  return r1.test(s) || r2.test(s);
-};
-
+  const steps = useMemo(() => ["Household", "Members", "Photo", "Review"], []);
   const [step, setStep] = useState(0);
+
   const [householdId, setHouseholdId] = useState(null);
   const [status, setStatus] = useState("draft");
 
-  // ✅ citizenshipNo added here
-  const [household, setHousehold] = useState({
-    ward: "",
-    address: "",
-    citizenshipNo: "",
-  });
-
+  const [household, setHousehold] = useState({ ward: "", address: "" });
   const [members, setMembers] = useState([]);
+  const [memberDraft, setMemberDraft] = useState({ name: "", age: "", gender: "Male" });
   const [documents, setDocuments] = useState([]);
-  const [docType, setDocType] = useState("Citizenship");
 
+  const [loadingEdit, setLoadingEdit] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
-  const [loadingEdit, setLoadingEdit] = useState(false);
 
-  // ✅ can edit until admin verifies
   const canEdit = status !== "verified";
 
-  // load existing data if user is editing
   useEffect(() => {
-    const loadEdit = async () => {
-      if (!editId) return;
+    if (!editId) return;
 
+    const load = async () => {
       try {
-        setError("");
         setLoadingEdit(true);
+        setError("");
 
         const data = await apiFetch(`/api/households/${editId}`);
 
         setHouseholdId(data.householdId);
         setStatus(data.status || "draft");
-
-        setHousehold({
-          ward: data.ward || "",
-          address: data.address || "",
-          citizenshipNo: data.citizenshipNo || "",
-        });
-
+        setHousehold({ ward: data.ward || "", address: data.address || "" });
         setMembers(Array.isArray(data.members) ? data.members : []);
         setDocuments(Array.isArray(data.documents) ? data.documents : []);
 
-        // if already verified, user should not edit
-        if (data.status === "verified") {
+        if ((data.status || "").toLowerCase() === "verified") {
           navigate(`/user/household/${editId}`, { replace: true });
         }
       } catch (e) {
-        setError(e.message);
+        setError(e.message || "Failed to load household");
       } finally {
         setLoadingEdit(false);
       }
     };
 
-    loadEdit();
-    // eslint-disable-next-line
-  }, [editId]);
+    load();
+  }, [editId, navigate]);
 
-  const goBack = () => setStep((s) => Math.max(s - 1, 0));
+  const validateStep = (s) => {
+    if (s === 0) {
+      if (!household.ward.trim()) throw new Error("Ward is required.");
+      if (!household.address.trim()) throw new Error("Address is required.");
+    }
+    if (s === 1) {
+      if (members.length === 0) throw new Error("Add at least one member.");
+      for (let i = 0; i < members.length; i++) {
+        if (!String(members[i]?.name || "").trim()) {
+          throw new Error(`Member ${i + 1}: Name is required.`);
+        }
+      }
+    }
+    if (s === 2) {
+      if (documents.length === 0) throw new Error("Upload at least one photo.");
+    }
+  };
 
   const saveDraft = async () => {
-    if (!canEdit) throw new Error("This household is verified. You cannot edit.");
+    if (!canEdit) throw new Error("This record is verified. You cannot edit.");
 
-    setSaving(true);
-    setError("");
+    const payload = {
+      ward: household.ward.trim(),
+      address: household.address.trim(),
+      members,
+      documents,
+    };
 
-    try {
-      // ✅ citizenshipNo is required now
-      const payload = {
-        ward: household.ward,
-        address: household.address,
-        citizenshipNo: household.citizenshipNo,
-        members,
-        documents,
-      };
+    if (!payload.ward || !payload.address) throw new Error("Ward and address are required.");
 
-      // simple validation
-      if (!payload.ward || !payload.address || !payload.citizenshipNo) {
-        throw new Error("Ward, address and citizenship number are required.");
-      }
-
-      // create
-      if (!householdId) {
-        const created = await apiFetch("/api/households", {
-          method: "POST",
-          body: JSON.stringify(payload),
-        });
-
-        setHouseholdId(created.householdId);
-        setStatus(created.status || "draft");
-        return created.householdId;
-      }
-
-      // update
-      const updated = await apiFetch(`/api/households/${householdId}`, {
-        method: "PUT",
+    if (!householdId) {
+      const created = await apiFetch("/api/households", {
+        method: "POST",
         body: JSON.stringify(payload),
       });
 
-      setStatus(updated.status || status);
-      return householdId;
+      setHouseholdId(created.householdId);
+      setStatus(created.status || "draft");
+      return created.householdId;
+    }
+
+    const updated = await apiFetch(`/api/households/${householdId}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+
+    setStatus(updated.status || status);
+    return householdId;
+  };
+
+  const next = async () => {
+    if (saving || uploading) return;
+    setError("");
+
+    try {
+      validateStep(step);
+      setSaving(true);
+      if (step < steps.length - 1) await saveDraft();
+      setStep((x) => Math.min(x + 1, steps.length - 1));
     } catch (e) {
-      throw new Error(e.message || "Could not save draft.");
+      setError(e.message);
     } finally {
       setSaving(false);
     }
   };
 
-  const goNext = async () => {
+  const back = () => setStep((x) => Math.max(x - 1, 0));
+
+  const addMember = () => {
+    if (!canEdit) return;
     setError("");
-    try {
-      // autosave when moving forward
-      if (step < 3) await saveDraft();
-      setStep((s) => Math.min(s + 1, steps.length - 1));
-    } catch (e) {
-      setError(e.message);
-    }
+
+    const name = memberDraft.name.trim();
+    if (!name) return setError("Member name is required.");
+
+    const age = memberDraft.age === "" ? null : Number(memberDraft.age);
+
+    setMembers((prev) => [...prev, { name, age, gender: memberDraft.gender || "Male" }]);
+    setMemberDraft({ name: "", age: "", gender: "Male" });
   };
 
-  const handleUpload = async (file) => {
+  const removeMember = (idx) => {
     if (!canEdit) return;
+    setMembers((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const uploadPhoto = async (file) => {
+    if (!canEdit) return;
+    if (!file) return;
 
     setUploading(true);
     setError("");
@@ -161,8 +152,10 @@ export default function HouseholdNew() {
       let id = householdId;
       if (!id) id = await saveDraft();
 
-      const result = await uploadDoc(id, docType, file);
-      setDocuments(result.item?.documents || []);
+      const res = await uploadDoc(id, "Photo", file);
+      const nextDocs = res?.item?.documents;
+      if (!Array.isArray(nextDocs)) throw new Error("Upload did not return documents.");
+      setDocuments(nextDocs);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -170,13 +163,18 @@ export default function HouseholdNew() {
     }
   };
 
-  const submitForVerification = async () => {
+  const submit = async () => {
     if (!canEdit) return;
+    if (saving || uploading) return;
 
     setSaving(true);
     setError("");
 
     try {
+      validateStep(0);
+      validateStep(1);
+      validateStep(2);
+
       const id = householdId || (await saveDraft());
       await apiFetch(`/api/households/${id}/submit`, { method: "POST" });
       navigate("/user/forms");
@@ -189,16 +187,13 @@ export default function HouseholdNew() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      {/* page header */}
       <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold">
-            {editId ? "Edit household" : t("household.title")}
+            {editId ? "Edit household" : "Household form"}
           </h1>
           <p className="text-black/60 font-medium mt-1">
-            {editId
-              ? `Editing: ${editId} (status: ${status})`
-              : t("household.subtitle")}
+            {editId ? `Editing: ${editId} (status: ${status})` : ""}
           </p>
         </div>
 
@@ -206,13 +201,13 @@ export default function HouseholdNew() {
           to="/user/forms"
           className="rounded-2xl px-4 py-2 font-bold border hover:bg-black/5 transition"
         >
-          {t("household.backToForms")}
+          Back
         </Link>
       </div>
 
       {loadingEdit && (
         <div className="p-6 bg-white border rounded-3xl font-bold text-black/60">
-          Loading household...
+          Loading...
         </div>
       )}
 
@@ -226,9 +221,7 @@ export default function HouseholdNew() {
       {!canEdit && (
         <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5">
           <div className="font-extrabold text-amber-700">Verified</div>
-          <div className="text-amber-700/80 mt-1">
-            This household is verified. You cannot edit now.
-          </div>
+          <div className="text-amber-700/80 mt-1">This record is locked.</div>
           <Link
             to={`/user/household/${householdId || editId}`}
             className="inline-block mt-3 rounded-2xl px-4 py-2 font-extrabold bg-zinc-900 text-white"
@@ -239,7 +232,6 @@ export default function HouseholdNew() {
       )}
 
       <div className="rounded-3xl bg-white border shadow-sm p-5">
-        {/* steps */}
         <div className="flex flex-wrap gap-2">
           {steps.map((label, idx) => (
             <div
@@ -256,339 +248,161 @@ export default function HouseholdNew() {
         </div>
 
         <div className="mt-6">
-          {/* STEP 1 */}
           {step === 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="font-extrabold">Citizenship No</label>
-
-                {/* Good practice: don't allow changing citizenship no in edit mode */}
-                <input
-                  disabled={!canEdit || !!editId}
-                  className="mt-2 w-full rounded-2xl border p-3 disabled:bg-zinc-100"
-                  value={household.citizenshipNo}
-                  onChange={(e) =>
-                    setHousehold({ ...household, citizenshipNo: e.target.value })
-                  }
-                  placeholder="e.g. 12-01-99999"
-                />
-
-                {editId && (
-                  <div className="text-xs text-black/50 font-semibold mt-2">
-                    Citizenship number is fixed after first save.
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label className="font-extrabold">{t("household.info.ward")}</label>
+                <label className="font-extrabold">Ward</label>
                 <input
                   disabled={!canEdit}
                   className="mt-2 w-full rounded-2xl border p-3 disabled:bg-zinc-100"
                   value={household.ward}
-                  onChange={(e) =>
-                    setHousehold({ ...household, ward: e.target.value })
-                  }
-                  placeholder={t("household.info.wardPh")}
+                  onChange={(e) => setHousehold({ ...household, ward: e.target.value })}
                 />
               </div>
 
               <div className="sm:col-span-2">
-                <label className="font-extrabold">{t("household.info.address")}</label>
+                <label className="font-extrabold">Address</label>
                 <input
                   disabled={!canEdit}
                   className="mt-2 w-full rounded-2xl border p-3 disabled:bg-zinc-100"
                   value={household.address}
-                  onChange={(e) =>
-                    setHousehold({ ...household, address: e.target.value })
-                  }
-                  placeholder={t("household.info.addressPh")}
+                  onChange={(e) => setHousehold({ ...household, address: e.target.value })}
                 />
               </div>
             </div>
           )}
 
-          {/* STEP 2 */}
           {step === 1 && (
-            <div className="space-y-4">
-              <button
-                disabled={!canEdit}
-                onClick={() =>
-                  setMembers((prev) => [
-                    ...prev,
-                    {
-                      name: "",
-                      age: "",
-                      gender: "Male",
-                      maritalStatus: "Single",
-                      education: "",
-                      occupation: "",
-                      disability: false,
-                      disabilityDetail: "",
-                    },
-                  ])
-                }
-                className="rounded-2xl px-5 py-3 font-extrabold bg-orange-500 text-white hover:bg-orange-600 active:bg-orange-700 transition disabled:opacity-50"
-              >
-                + {t("household.members.add")}
-              </button>
-
-              {members.length === 0 && (
-                <div className="text-black/60 font-semibold">
-                  Add at least one member to continue.
-                </div>
-              )}
-
-              {members.map((m, idx) => (
-                <div key={idx} className="rounded-3xl border p-5 bg-white space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="font-extrabold">
-                      {t("household.members.member", { n: idx + 1 })}
-                    </div>
-                    <button
-                      disabled={!canEdit}
-                      onClick={() => setMembers((prev) => prev.filter((_, i) => i !== idx))}
-                      className="text-rose-600 font-extrabold hover:underline disabled:opacity-50"
-                    >
-                      {t("common.remove")}
-                    </button>
-                  </div>
-
-                  {/* Name + Age */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="font-extrabold text-sm">Full Name</label>
-                      <input
-                        disabled={!canEdit}
-                        className="mt-2 rounded-2xl border p-3 w-full disabled:bg-zinc-100"
-                        value={m.name}
-                        onChange={(e) => {
-                          const copy = [...members];
-                          copy[idx].name = e.target.value;
-                          setMembers(copy);
-                        }}
-                        placeholder="Full name"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="font-extrabold text-sm">Age</label>
-                      <input
-                        disabled={!canEdit}
-                        type="number"
-                        className="mt-2 rounded-2xl border p-3 w-full disabled:bg-zinc-100"
-                        value={m.age}
-                        onChange={(e) => {
-                          const copy = [...members];
-                          copy[idx].age = e.target.value;
-                          setMembers(copy);
-                        }}
-                        placeholder="Age"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Gender + Marital */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="font-extrabold text-sm">Gender</label>
-                      <select
-                        disabled={!canEdit}
-                        className="mt-2 rounded-2xl border p-3 w-full disabled:bg-zinc-100"
-                        value={m.gender || "Male"}
-                        onChange={(e) => {
-                          const copy = [...members];
-                          copy[idx].gender = e.target.value;
-                          setMembers(copy);
-                        }}
-                      >
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="font-extrabold text-sm">Marital Status</label>
-                      <select
-                        disabled={!canEdit}
-                        className="mt-2 rounded-2xl border p-3 w-full disabled:bg-zinc-100"
-                        value={m.maritalStatus || "Single"}
-                        onChange={(e) => {
-                          const copy = [...members];
-                          copy[idx].maritalStatus = e.target.value;
-                          setMembers(copy);
-                        }}
-                      >
-                        <option value="Single">Single</option>
-                        <option value="Married">Married</option>
-                        <option value="Divorced">Divorced</option>
-                        <option value="Widowed">Widowed</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Education + Occupation */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="font-extrabold text-sm">Education</label>
-                      <input
-                        disabled={!canEdit}
-                        className="mt-2 rounded-2xl border p-3 w-full disabled:bg-zinc-100"
-                        value={m.education || ""}
-                        onChange={(e) => {
-                          const copy = [...members];
-                          copy[idx].education = e.target.value;
-                          setMembers(copy);
-                        }}
-                        placeholder="e.g. SEE, +2, Bachelor"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="font-extrabold text-sm">Occupation</label>
-                      <input
-                        disabled={!canEdit}
-                        className="mt-2 rounded-2xl border p-3 w-full disabled:bg-zinc-100"
-                        value={m.occupation || ""}
-                        onChange={(e) => {
-                          const copy = [...members];
-                          copy[idx].occupation = e.target.value;
-                          setMembers(copy);
-                        }}
-                        placeholder="e.g. Student, Teacher, Farmer"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Disability */}
-                  <div className="rounded-2xl border p-4">
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <div className="font-extrabold">Disability</div>
-                        <div className="text-black/60 text-sm font-medium">
-                          Tick if the member has a disability.
-                        </div>
-                      </div>
-
-                      <input
-                        disabled={!canEdit}
-                        type="checkbox"
-                        className="h-5 w-5"
-                        checked={!!m.disability}
-                        onChange={(e) => {
-                          const copy = [...members];
-                          copy[idx].disability = e.target.checked;
-                          if (!e.target.checked) copy[idx].disabilityDetail = "";
-                          setMembers(copy);
-                        }}
-                      />
-                    </div>
-
-                    {m.disability && (
-                      <div className="mt-3">
-                        <label className="font-extrabold text-sm">Disability Details</label>
-                        <input
-                          disabled={!canEdit}
-                          className="mt-2 rounded-2xl border p-3 w-full disabled:bg-zinc-100"
-                          value={m.disabilityDetail || ""}
-                          onChange={(e) => {
-                            const copy = [...members];
-                            copy[idx].disabilityDetail = e.target.value;
-                            setMembers(copy);
-                          }}
-                          placeholder="Describe disability"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* STEP 3 (same as your code) */}
-          {step === 2 && (
-            <div className="rounded-3xl border p-5 bg-white">
-              <div className="font-extrabold text-lg">{t("household.documents.title")}</div>
-              <div className="text-black/60 font-medium mt-1">{t("household.documents.subtitle")}</div>
-
-              <div className="mt-4 flex flex-wrap gap-3 items-center">
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <input
+                  disabled={!canEdit}
+                  className="rounded-2xl border p-3 disabled:bg-zinc-100"
+                  placeholder="Name"
+                  value={memberDraft.name}
+                  onChange={(e) => setMemberDraft({ ...memberDraft, name: e.target.value })}
+                />
+                <input
+                  disabled={!canEdit}
+                  className="rounded-2xl border p-3 disabled:bg-zinc-100"
+                  placeholder="Age"
+                  value={memberDraft.age}
+                  onChange={(e) => setMemberDraft({ ...memberDraft, age: e.target.value })}
+                />
                 <select
                   disabled={!canEdit}
                   className="rounded-2xl border p-3 disabled:bg-zinc-100"
-                  value={docType}
-                  onChange={(e) => setDocType(e.target.value)}
+                  value={memberDraft.gender}
+                  onChange={(e) => setMemberDraft({ ...memberDraft, gender: e.target.value })}
                 >
-                  <option value="Citizenship">{t("household.documents.citizenship")}</option>
-                  <option value="Birth Certificate">{t("household.documents.birth")}</option>
-                  <option value="License">{t("household.documents.license")}</option>
+                  <option>Male</option>
+                  <option>Female</option>
+                  <option>Other</option>
                 </select>
-
-                <input
-                  disabled={!canEdit || uploading}
-                  type="file"
-                  accept="image/*,application/pdf"
-                  className="rounded-2xl border p-3 disabled:bg-zinc-100"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    await handleUpload(file);
-                    e.target.value = "";
-                  }}
-                />
               </div>
 
-              <div className="mt-5 space-y-2">
-                {documents.length === 0 ? (
-                  <div className="text-black/60 font-semibold">{t("household.documents.none")}</div>
-                ) : (
-                  documents.map((d, i) => (
-                    <div key={i} className="rounded-2xl border p-4 flex items-center justify-between gap-4">
-                      <div>
-                        <div className="font-extrabold">{d.type}</div>
-                        <a className="text-blue-700 underline break-all" href={d.url} target="_blank" rel="noreferrer">
-                          {d.url}
-                        </a>
-                      </div>
+              <button
+                disabled={!canEdit}
+                onClick={addMember}
+                className="rounded-2xl px-5 py-3 font-extrabold bg-zinc-900 text-white disabled:opacity-50"
+              >
+                Add member
+              </button>
+
+              <div className="space-y-2">
+                {members.map((m, i) => (
+                  <div key={i} className="rounded-2xl border p-3 flex justify-between gap-3">
+                    <div className="font-semibold">
+                      {m.name} {m.age ? `(${m.age})` : ""} — {m.gender}
                     </div>
-                  ))
-                )}
+                    <button
+                      disabled={!canEdit}
+                      onClick={() => removeMember(i)}
+                      className="font-extrabold text-rose-600 disabled:opacity-50"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
-          {/* STEP 4 */}
+          {step === 2 && (
+            <div className="space-y-4">
+              <div className="rounded-2xl border p-4">
+                <div className="font-extrabold mb-2">Upload photo</div>
+                <input
+                  disabled={!canEdit}
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={(e) => uploadPhoto(e.target.files?.[0])}
+                />
+                {uploading && <div className="mt-2 text-sm font-bold text-black/60">Uploading...</div>}
+              </div>
+
+              <div className="space-y-2">
+                {documents.map((d, i) => (
+                  <div key={i} className="rounded-2xl border p-3 text-sm">
+                    {d.originalName || d.url}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {step === 3 && (
-            <div className="rounded-3xl border p-5 bg-white space-y-5">
-              <div className="font-extrabold text-lg">{t("household.review.title")}</div>
+            <div className="space-y-4">
+              <div className="rounded-2xl border p-4">
+                <div className="font-extrabold mb-2">Household</div>
+                <div>Ward: {household.ward}</div>
+                <div>Address: {household.address}</div>
+              </div>
+
+              <div className="rounded-2xl border p-4">
+                <div className="font-extrabold mb-2">Members</div>
+                {members.map((m, i) => (
+                  <div key={i} className="text-sm">
+                    {i + 1}. {m.name} {m.age ? `(${m.age})` : ""} — {m.gender}
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-2xl border p-4">
+                <div className="font-extrabold mb-2">Photos</div>
+                {documents.map((d, i) => (
+                  <div key={i} className="text-sm">
+                    {i + 1}. {d.originalName || d.url}
+                  </div>
+                ))}
+              </div>
+
               <button
-                onClick={submitForVerification}
-                disabled={saving || uploading || !canEdit}
-                className="rounded-2xl px-5 py-3 font-extrabold bg-orange-500 text-white hover:bg-orange-600 active:bg-orange-700 transition disabled:opacity-50"
+                disabled={!canEdit || saving || uploading}
+                onClick={submit}
+                className="rounded-2xl px-5 py-3 font-extrabold bg-emerald-600 text-white disabled:opacity-50"
               >
-                {saving ? "Submitting..." : t("household.review.submit")}
+                {saving ? "Submitting..." : "Submit for verification"}
               </button>
             </div>
           )}
         </div>
 
-        {/* bottom buttons */}
         <div className="mt-6 flex items-center justify-between">
           <button
-            onClick={goBack}
+            onClick={back}
             disabled={step === 0 || saving || uploading}
             className="rounded-2xl px-5 py-3 font-extrabold border disabled:opacity-50 hover:bg-black/5 transition"
           >
-            {t("common.back")}
+            Back
           </button>
 
           <button
-            onClick={goNext}
+            onClick={next}
             disabled={step === steps.length - 1 || saving || uploading || !canEdit}
             className="rounded-2xl px-5 py-3 font-extrabold bg-zinc-900 text-white hover:opacity-90 disabled:opacity-50 transition"
           >
-            {t("common.next")}
+            {saving ? "Saving..." : "Next"}
           </button>
         </div>
       </div>

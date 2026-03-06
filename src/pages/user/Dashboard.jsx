@@ -81,44 +81,54 @@ export default function Dashboard() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
 
-  // ✅ REAL USER: from localStorage
   const [user, setUser] = useState({
     name: "",
     phone: "",
     email: "",
+    profileImageUrl: "",
   });
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("user");
-      const token = localStorage.getItem("token");
+    const loadUser = () => {
+      try {
+        const token = localStorage.getItem("token");
+        const saved = localStorage.getItem("me") || localStorage.getItem("user");
 
-      // If no token/user, send to login (optional, but good)
-      if (!token || !saved) {
-        // comment this out if you don't want auto-redirect
+        if (!token || !saved) {
+          navigate("/login");
+          return;
+        }
+
+        const u = JSON.parse(saved);
+
+        setUser({
+          name: u?.name || "",
+          email: u?.email || "",
+          phone: u?.phone || "",
+          profileImageUrl: u?.profileImageUrl || "",
+        });
+      } catch {
+        localStorage.removeItem("user");
+        localStorage.removeItem("me");
+        localStorage.removeItem("token");
         navigate("/login");
-        return;
       }
+    };
 
-      const u = JSON.parse(saved);
-      setUser({
-        name: u?.name || "",
-        email: u?.email || "",
-        phone: u?.phone || "",
-      });
-    } catch {
-      // if JSON is broken, reset and go login
-      localStorage.removeItem("user");
-      localStorage.removeItem("token");
-      navigate("/login");
-    }
+    loadUser();
+
+    const syncUser = () => loadUser();
+    window.addEventListener("user-updated", syncUser);
+
+    return () => {
+      window.removeEventListener("user-updated", syncUser);
+    };
   }, [navigate]);
 
-  // ✅ Replace with backend data later kept as demo data 
   const household = useMemo(
     () => ({
       exists: true,
-      status: "draft", // draft | submitted | rejected | verified
+      status: "draft",
       householdId: "HH-10293",
       lastUpdated: "Today, 10:42 AM",
       rejectionReason: "Citizenship photo is unclear.",
@@ -126,7 +136,6 @@ export default function Dashboard() {
     []
   );
 
-  // ✅ Real-life: start empty; backend will fill
   const notifications = useMemo(() => [], []);
 
   const canEdit = household.status === "draft" || household.status === "rejected";
@@ -137,13 +146,21 @@ export default function Dashboard() {
   return (
     <div className="min-h-[calc(100vh-80px)] bg-gradient-to-b from-orange-50/60 via-white to-white">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-10 space-y-6">
-        {/* ✅ Header = Profile section */}
         <div className="rounded-3xl border border-black/5 bg-white p-5 sm:p-6 shadow-sm">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            {/* Left: profile */}
             <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-2xl bg-orange-100 text-orange-700 grid place-items-center">
-                <UserIcon className="h-6 w-6" />
+              <div className="h-14 w-14 rounded-2xl overflow-hidden border bg-orange-100 text-orange-700 grid place-items-center">
+                {user.profileImageUrl ? (
+                  <img
+                    src={user.profileImageUrl}
+                    alt={user.name || "User"}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="h-full w-full grid place-items-center">
+                    <UserIcon className="h-6 w-6" />
+                  </div>
+                )}
               </div>
 
               <div className="min-w-0">
@@ -157,7 +174,9 @@ export default function Dashboard() {
                   </Link>
                 </div>
 
-                <p className="mt-1 text-sm sm:text-base text-zinc-600 font-medium">{t("dashboard.subtitle")}</p>
+                <p className="mt-1 text-sm sm:text-base text-zinc-600 font-medium">
+                  {t("dashboard.subtitle")}
+                </p>
 
                 <div className="mt-2 text-sm font-semibold text-zinc-800 flex flex-wrap gap-x-3 gap-y-1">
                   <span className="truncate">{user.name || "—"}</span>
@@ -169,11 +188,11 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Right: language + actions */}
             <div className="flex flex-wrap items-center gap-3">
-              {/* Language toggle */}
               <div className="flex items-center gap-2 rounded-2xl border border-black/10 bg-zinc-50 p-2">
-                <span className="text-xs font-extrabold text-zinc-500 px-2">{t("common.language")}</span>
+                <span className="text-xs font-extrabold text-zinc-500 px-2">
+                  {t("common.language")}
+                </span>
 
                 <button
                   onClick={() => {
@@ -201,7 +220,11 @@ export default function Dashboard() {
               </div>
 
               <PrimaryBtn to={ctaTo}>
-                {!household.exists ? t("dashboard.createHousehold") : canEdit ? t("dashboard.continueSubmit") : t("dashboard.viewForms")}
+                {!household.exists
+                  ? t("dashboard.createHousehold")
+                  : canEdit
+                  ? t("dashboard.continueSubmit")
+                  : t("dashboard.viewForms")}
               </PrimaryBtn>
 
               <GhostBtn to="/user/notifications">{t("dashboard.notificationsBtn")}</GhostBtn>
@@ -209,9 +232,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* Household form status */}
           <Card title={t("dashboard.householdForm")} right={<StatusBadge status={household.status} />} className="lg:col-span-2">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="rounded-2xl border border-black/5 bg-zinc-50 p-4">
@@ -237,7 +258,6 @@ export default function Dashboard() {
             </div>
           </Card>
 
-          {/* QR */}
           <Card title={t("dashboard.qrCode")} right={household.status === "verified" ? <StatusBadge status="verified" /> : null}>
             <p className="text-sm font-medium text-zinc-600">{t("dashboard.qrDesc")}</p>
 
@@ -254,7 +274,6 @@ export default function Dashboard() {
             </div>
           </Card>
 
-          {/* Notifications (real-life empty) */}
           <Card
             title={t("notifications.recent")}
             right={
@@ -287,7 +306,6 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Quick actions */}
         <div className="rounded-3xl border border-black/5 bg-white p-6 shadow-sm">
           <h2 className="text-base sm:text-lg font-extrabold tracking-tight">{t("dashboard.quickActions")}</h2>
 

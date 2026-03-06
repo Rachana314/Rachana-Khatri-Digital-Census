@@ -1,7 +1,6 @@
-import { useState } from "react";
-import { Outlet, NavLink } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Outlet, NavLink, useNavigate } from "react-router-dom";
 
-// Simple SVG icons
 const Icon = ({ children }) => (
   <span className="w-5 h-5 inline-block">{children}</span>
 );
@@ -55,6 +54,8 @@ const SettingsIcon = () => (
 
 export default function UserLayout() {
   const [open, setOpen] = useState(false);
+  const [me, setMe] = useState(null);
+  const navigate = useNavigate();
 
   const baseLink =
     "flex items-center gap-3 px-4 py-3 rounded-xl text-white text-lg font-extrabold transition hover:text-blue-700 hover:bg-white/80";
@@ -64,13 +65,57 @@ export default function UserLayout() {
   const linkClass = ({ isActive }) =>
     `${baseLink} ${isActive ? activeLink : ""}`;
 
+  useEffect(() => {
+    const loadUser = () => {
+      try {
+        const raw = localStorage.getItem("me") || localStorage.getItem("user");
+        setMe(raw ? JSON.parse(raw) : null);
+      } catch {
+        setMe(null);
+      }
+    };
+
+    loadUser();
+    window.addEventListener("user-updated", loadUser);
+
+    return () => window.removeEventListener("user-updated", loadUser);
+  }, []);
+
+  const logout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("me");
+    window.dispatchEvent(new Event("user-updated"));
+    navigate("/login", { replace: true });
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      {/* 🟧 Desktop Sidebar */}
       <aside className="hidden md:flex w-72 bg-orange-500 text-white flex-col">
         <div className="p-5 border-b border-white/30">
           <h2 className="text-2xl font-extrabold">Digital Census</h2>
           <p className="text-sm text-white/80 font-semibold">User Panel</p>
+
+          <div className="mt-4 flex items-center gap-3 rounded-2xl bg-white/10 p-3">
+            <div className="h-12 w-12 rounded-full overflow-hidden border border-white/30 bg-white/20">
+              {me?.profileImageUrl ? (
+                <img
+                  src={me.profileImageUrl}
+                  alt={me?.name || "User"}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="h-full w-full flex items-center justify-center font-extrabold text-white">
+                  {String(me?.name || "U").charAt(0).toUpperCase()}
+                </div>
+              )}
+            </div>
+
+            <div className="min-w-0">
+              <div className="font-extrabold truncate">{me?.name || "User"}</div>
+              <div className="text-xs text-white/80 truncate">{me?.email || ""}</div>
+            </div>
+          </div>
         </div>
 
         <nav className="p-4 space-y-2 flex-1">
@@ -91,55 +136,125 @@ export default function UserLayout() {
           </NavLink>
         </nav>
 
-        <div className="p-4 border-t border-white/30">
+        <div className="p-4 border-t border-white/30 space-y-2">
           <NavLink to="/user/settings" className={linkClass}>
             <SettingsIcon /> Settings
           </NavLink>
+
+          <button
+            onClick={logout}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white text-lg font-extrabold transition hover:bg-white/15 text-left"
+          >
+            <SettingsIcon /> Logout
+          </button>
         </div>
       </aside>
 
-      {/* 📱 Mobile Drawer */}
       {open && (
         <div className="fixed inset-0 z-40 md:hidden">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setOpen(false)}
+          />
+
           <div className="absolute left-0 top-0 h-full w-72 bg-orange-500 text-white flex flex-col shadow-xl">
-            <div className="p-5 border-b border-white/30 flex justify-between items-center">
-              <div>
+            <div className="p-5 border-b border-white/30 flex justify-between items-start">
+              <div className="w-full">
                 <h2 className="text-2xl font-extrabold">Digital Census</h2>
                 <p className="text-sm text-white/80 font-semibold">User Panel</p>
+
+                <div className="mt-4 flex items-center gap-3 rounded-2xl bg-white/10 p-3">
+                  <div className="h-12 w-12 rounded-full overflow-hidden border border-white/30 bg-white/20">
+                    {me?.profileImageUrl ? (
+                      <img
+                        src={me.profileImageUrl}
+                        alt={me?.name || "User"}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center font-extrabold text-white">
+                        {String(me?.name || "U").charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="min-w-0">
+                    <div className="font-extrabold truncate">{me?.name || "User"}</div>
+                    <div className="text-xs text-white/80 truncate">{me?.email || ""}</div>
+                  </div>
+                </div>
               </div>
-              <button onClick={() => setOpen(false)} className="font-bold">✕</button>
+
+              <button onClick={() => setOpen(false)} className="font-bold ml-3">
+                ✕
+              </button>
             </div>
 
             <nav className="p-4 space-y-2 flex-1">
-              <NavLink to="/user/dashboard" className={linkClass} onClick={() => setOpen(false)}>
+              <NavLink
+                to="/user/dashboard"
+                className={linkClass}
+                onClick={() => setOpen(false)}
+              >
                 <DashboardIcon /> Dashboard
               </NavLink>
-              <NavLink to="/user/forms" className={linkClass} onClick={() => setOpen(false)}>
+
+              <NavLink
+                to="/user/forms"
+                className={linkClass}
+                onClick={() => setOpen(false)}
+              >
                 <FormIcon /> Forms
               </NavLink>
-              <NavLink to="/user/notifications" className={linkClass} onClick={() => setOpen(false)}>
+
+              <NavLink
+                to="/user/notifications"
+                className={linkClass}
+                onClick={() => setOpen(false)}
+              >
                 <BellIcon /> Notifications
               </NavLink>
-              <NavLink to="/user/profile" className={linkClass} onClick={() => setOpen(false)}>
+
+              <NavLink
+                to="/user/profile"
+                className={linkClass}
+                onClick={() => setOpen(false)}
+              >
                 <UserIcon /> Profile
               </NavLink>
             </nav>
 
-            <div className="p-4 border-t border-white/30">
-              <NavLink to="/user/settings" className={linkClass} onClick={() => setOpen(false)}>
+            <div className="p-4 border-t border-white/30 space-y-2">
+              <NavLink
+                to="/user/settings"
+                className={linkClass}
+                onClick={() => setOpen(false)}
+              >
                 <SettingsIcon /> Settings
               </NavLink>
+
+              <button
+                onClick={() => {
+                  setOpen(false);
+                  logout();
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white text-lg font-extrabold transition hover:bg-white/15 text-left"
+              >
+                <SettingsIcon /> Logout
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 🟦 Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="bg-white border-b px-4 sm:px-6 py-3 flex justify-between items-center">
-          <div className="font-extrabold text-lg sm:text-xl">User Dashboard</div>
-          <button onClick={() => setOpen(true)} className="md:hidden font-extrabold text-xl">☰</button>
+        <header className="bg-white border-b px-4 sm:px-6 py-3 flex justify-end items-center">
+          <button
+            onClick={() => setOpen(true)}
+            className="md:hidden font-extrabold text-xl"
+          >
+            ☰
+          </button>
         </header>
 
         <main className="p-4 sm:p-6">
