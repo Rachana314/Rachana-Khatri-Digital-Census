@@ -2,9 +2,13 @@ import mongoose from "mongoose";
 
 const MemberSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true },
+    name: { type: String, default: "" },
     age: { type: Number, default: null },
-    gender: { type: String, enum: ["Male", "Female", "Other"], default: "Male" },
+    gender: {
+      type: String,
+      enum: ["Male", "Female", "Other"],
+      default: "Male",
+    },
     maritalStatus: { type: String, default: "Single" },
     education: { type: String, default: "" },
     occupation: { type: String, default: "" },
@@ -16,26 +20,30 @@ const MemberSchema = new mongoose.Schema(
 
 const DocumentSchema = new mongoose.Schema(
   {
-    type: { type: String, default: "Photo" },
+    type: {
+      type: String,
+      enum: ["Citizenship", "Birth Certificate", "License", "Photo"],
+      required: true,
+    },
     url: { type: String, required: true },
-    hash: { type: String, default: "" },
     originalName: { type: String, default: "" },
-    mime: { type: String, default: "" },
-    size: { type: Number, default: 0 },
   },
   { _id: false }
 );
 
 const HouseholdSchema = new mongoose.Schema(
   {
-    householdId: { type: String, unique: true, index: true },
+    householdId: {
+      type: String,
+      unique: true,
+      index: true,
+    },
 
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
       unique: true,
-      index: true,
     },
 
     ward: { type: String, required: true },
@@ -46,27 +54,29 @@ const HouseholdSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["draft", "submitted", "rejected", "verified"],
+      enum: ["draft", "submitted", "correction_required", "rejected", "verified"],
       default: "draft",
     },
 
     rejectionReason: { type: String, default: "" },
     locked: { type: Boolean, default: false },
 
-    verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    verifiedAt: { type: Date },
+    verifiedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    verifiedAt: { type: Date, default: null },
 
     qrCodeData: { type: String, default: "" },
   },
   { timestamps: true }
 );
 
-HouseholdSchema.index({ "documents.hash": 1 }, { unique: true, sparse: true });
-
 HouseholdSchema.pre("validate", function () {
   if (!this.householdId) {
-    const rand = Math.floor(10000 + Math.random() * 90000);
-    this.householdId = `HH-${rand}`;
+    const rand = Math.floor(100000 + Math.random() * 900000);
+    this.householdId = `HH-${Date.now()}-${rand}`;
   }
 });
 

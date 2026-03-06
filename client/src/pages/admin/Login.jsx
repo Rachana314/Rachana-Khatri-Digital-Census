@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FiEye, FiEyeOff } from "react-icons/fi";
+import { apiFetch } from "../../lib/api";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -16,22 +17,23 @@ export default function Login() {
 
     try {
       setLoading(true);
-      const res = await fetch("http://localhost:5000/api/auth/admin/login", {
+
+      const data = await apiFetch("/api/auth/admin/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+        }),
       });
 
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) return alert(data.msg || data.message || "Login failed");
-
-      // ✅ SAVE BOTH token + user
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
+      alert(data.message || "Login successful");
       navigate("/admin/dashboard");
     } catch (err) {
-      alert(err.message || "Server error");
+      console.error(err);
+      alert(err.message || "Login failed");
     } finally {
       setLoading(false);
     }

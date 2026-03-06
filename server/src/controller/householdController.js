@@ -1,27 +1,25 @@
-import fs from "fs";
-import crypto from "crypto";
-import PDFDocument from "pdfkit";
-
+import QRCode from "qrcode";
 import Household from "../models/Household.js";
 import Notification from "../models/Notification.js";
 
-function hashFileSha256(filePath) {
-  const buf = fs.readFileSync(filePath);
-  return crypto.createHash("sha256").update(buf).digest("hex");
-}
-
+// LIST HOUSEHOLDS
 export async function listHouseholds(req, res) {
   try {
     const items = await Household.find({ user: req.user._id })
       .sort({ updatedAt: -1 })
-      .select("householdId status updatedAt rejectionReason locked qrCodeData");
+      .select(
+        "householdId status updatedAt rejectionReason locked ward address members documents qrCodeData"
+      );
 
     return res.json(items);
   } catch (err) {
-    return res.status(500).json({ message: err.message || "Failed to list households" });
+    return res.status(500).json({
+      message: err.message || "Failed to list households",
+    });
   }
 }
 
+// GET SINGLE HOUSEHOLD
 export async function getHousehold(req, res) {
   try {
     const item = await Household.findOne({
@@ -29,19 +27,27 @@ export async function getHousehold(req, res) {
       user: req.user._id,
     });
 
-    if (!item) return res.status(404).json({ message: "Not found" });
+    if (!item) {
+      return res.status(404).json({ message: "Not found" });
+    }
+
     return res.json(item);
   } catch (err) {
-    return res.status(500).json({ message: err.message || "Failed to get household" });
+    return res.status(500).json({
+      message: err.message || "Failed to get household",
+    });
   }
 }
 
+// CREATE HOUSEHOLD
 export async function createHousehold(req, res) {
   try {
     const { ward, address, members = [], documents = [] } = req.body;
 
     if (!ward || !address) {
-      return res.status(400).json({ message: "Ward and address are required" });
+      return res.status(400).json({
+        message: "Ward and address are required",
+      });
     }
 
     const already = await Household.findOne({ user: req.user._id });
@@ -59,20 +65,33 @@ export async function createHousehold(req, res) {
       documents,
       status: "draft",
       locked: false,
+      qrCodeData: "",
     });
 
     return res.status(201).json(item);
   } catch (err) {
-    if (err?.code === 11000 && err.keyPattern?.user) {
-      return res.status(400).json({ message: "Only one household form is allowed per user." });
+    if (err?.code === 11000) {
+      if (err.keyPattern?.user) {
+        return res.status(400).json({
+          message: "Only one household form is allowed per user.",
+        });
+      }
+
+      if (err.keyPattern?.householdId) {
+        return res.status(400).json({
+          message: "Try again. ID collision happened.",
+        });
+      }
     }
-    if (err?.code === 11000 && err.keyPattern?.["documents.hash"]) {
-      return res.status(409).json({ message: "This document is already uploaded/used." });
-    }
-    return res.status(500).json({ message: err.message || "Failed to create household" });
+
+    console.error("🔥 createHousehold:", err.message);
+    return res.status(500).json({
+      message: err.message || "Failed to create household",
+    });
   }
 }
 
+// UPDATE HOUSEHOLD
 export async function updateHousehold(req, res) {
   try {
     const item = await Household.findOne({
@@ -80,11 +99,14 @@ export async function updateHousehold(req, res) {
       user: req.user._id,
     });
 
-    if (!item) return res.status(404).json({ message: "Not found" });
+    if (!item) {
+      return res.status(404).json({ message: "Not found" });
+    }
 
-    // Locked after verification
     if (item.locked || item.status === "verified") {
-      return res.status(400).json({ message: "This record is verified/locked. You cannot edit it." });
+      return res.status(400).json({
+        message: "This record is verified/locked. You cannot edit it.",
+      });
     }
 
     const { ward, address, members, documents } = req.body;
@@ -97,13 +119,14 @@ export async function updateHousehold(req, res) {
     await item.save();
     return res.json(item);
   } catch (err) {
-    if (err?.code === 11000 && err.keyPattern?.["documents.hash"]) {
-      return res.status(409).json({ message: "This document is already uploaded/used." });
-    }
-    return res.status(500).json({ message: err.message || "Failed to update household" });
+    console.error("🔥 updateHousehold:", err.message);
+    return res.status(500).json({
+      message: err.message || "Failed to update household",
+    });
   }
 }
 
+// SUBMIT HOUSEHOLD + GENERATE QR IMMEDIATELY
 export async function submitHousehold(req, res) {
   try {
     const item = await Household.findOne({
@@ -111,68 +134,106 @@ export async function submitHousehold(req, res) {
       user: req.user._id,
     });
 
-    if (!item) return res.status(404).json({ message: "Not found" });
-
-    if (item.status !== "draft" && item.status !== "rejected") {
-      return res.status(400).json({ message: "Invalid status for submit" });
+    if (!item) {
+      return res.status(404).json({ message: "Household not found" });
     }
 
-    // Same QR works forever because it opens a live status page
+    if (item.status !== "draft" && item.status !== "rejected") {
+      return res.status(400).json({
+        message: "Form already submitted",
+      });
+    }
+
     item.status = "submitted";
     item.rejectionReason = "";
-    item.qrCodeData = `http://localhost:5173/verify-household/${item.householdId}`;
+
+    const publicBaseUrl =
+      process.env.PUBLIC_FRONTEND_URL || "http://localhost:5173";
+    const publicQrUrl = `${publicBaseUrl}/verify/${item.householdId}`;
+
+    const qrImage = await QRCode.toDataURL(publicQrUrl);
+    item.qrCodeData = qrImage;
+
     await item.save();
 
     await Notification.create({
       user: req.user._id,
       type: "form",
       title: "Form Submitted",
-      msg: `Your household form ${item.householdId} was submitted for verification.`,
+      msg: `Your household form ${item.householdId} was submitted.`,
     });
 
-    return res.json({ message: "Submitted", item });
+    return res.json({
+      message: "Household submitted successfully",
+      item,
+      qrTargetUrl: publicQrUrl,
+    });
   } catch (err) {
-    return res.status(500).json({ message: err.message || "Failed to submit household" });
+    console.error("🔥 submitHousehold:", err.message);
+    return res.status(500).json({
+      message: err.message || "Failed to submit household",
+    });
   }
 }
 
+// UPLOAD DOCUMENT
 export async function uploadDocument(req, res) {
   try {
     const { householdId } = req.params;
-    const { type = "Photo" } = req.body;
+    const { type } = req.body;
 
-    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
-
-    const item = await Household.findOne({ householdId, user: req.user._id });
-    if (!item) return res.status(404).json({ message: "Household not found" });
-
-    if (item.locked || item.status === "verified") {
-      return res.status(400).json({ message: "Cannot upload documents after verification." });
+    if (!type) {
+      return res.status(400).json({
+        message: "Document type is required",
+      });
     }
 
-    const url = `http://localhost:5000/uploads/${req.file.filename}`;
-    const hash = hashFileSha256(req.file.path);
+    if (!req.file) {
+      return res.status(400).json({
+        message: "No file uploaded",
+      });
+    }
+
+    const item = await Household.findOne({
+      householdId,
+      user: req.user._id,
+    });
+
+    if (!item) {
+      return res.status(404).json({
+        message: "Household not found",
+      });
+    }
+
+    if (item.locked || item.status === "verified") {
+      return res.status(400).json({
+        message: "Cannot upload documents after verification.",
+      });
+    }
+
+    const url = `http://localhost:8000/uploads/${req.file.filename}`;
 
     item.documents.push({
       type,
       url,
-      hash,
       originalName: req.file.originalname,
-      mime: req.file.mimetype,
-      size: req.file.size,
     });
 
     await item.save();
 
-    return res.json({ message: "Uploaded", item });
+    return res.json({
+      message: "Uploaded",
+      item,
+    });
   } catch (err) {
-    if (err?.code === 11000 && err.keyPattern?.["documents.hash"]) {
-      return res.status(409).json({ message: "This document is already uploaded/used." });
-    }
-    return res.status(500).json({ message: err.message || "Failed to upload document" });
+    console.error("🔥 uploadDocument:", err.message);
+    return res.status(500).json({
+      message: err.message || "Failed to upload document",
+    });
   }
 }
 
+// DELETE HOUSEHOLD
 export async function deleteHousehold(req, res) {
   try {
     const item = await Household.findOne({
@@ -180,10 +241,14 @@ export async function deleteHousehold(req, res) {
       user: req.user._id,
     });
 
-    if (!item) return res.status(404).json({ message: "Not found" });
+    if (!item) {
+      return res.status(404).json({ message: "Not found" });
+    }
 
     if (item.locked || item.status === "verified") {
-      return res.status(400).json({ message: "Verified household cannot be deleted." });
+      return res.status(400).json({
+        message: "Verified household cannot be deleted.",
+      });
     }
 
     await Household.deleteOne({ _id: item._id });
@@ -197,94 +262,8 @@ export async function deleteHousehold(req, res) {
 
     return res.json({ message: "Deleted" });
   } catch (err) {
-    return res.status(500).json({ message: err.message || "Failed to delete household" });
-  }
-}
-
-// Public page used by QR scanning
-export async function getPublicHouseholdById(req, res) {
-  try {
-    const item = await Household.findOne({
-      householdId: req.params.householdId,
-    }).select(
-      "householdId ward address members status rejectionReason verifiedAt createdAt updatedAt qrCodeData"
-    );
-
-    if (!item) return res.status(404).json({ message: "Household not found" });
-
-    return res.json(item);
-  } catch (err) {
-    return res.status(500).json({ message: err.message || "Failed to fetch household" });
-  }
-}
-
-// PDF export for user's own household report
-export async function exportHouseholdPdf(req, res) {
-  try {
-    const item = await Household.findOne({
-      householdId: req.params.householdId,
-      user: req.user._id,
+    return res.status(500).json({
+      message: err.message || "Failed to delete household",
     });
-
-    if (!item) return res.status(404).json({ message: "Household not found" });
-
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${item.householdId}-report.pdf"`
-    );
-
-    const doc = new PDFDocument({ margin: 50 });
-    doc.pipe(res);
-
-    doc.fontSize(20).text("Digital Census - Household Report", { align: "center" });
-    doc.moveDown();
-
-    doc.fontSize(12).text(`Household ID: ${item.householdId}`);
-    doc.text(`Status: ${String(item.status || "").toUpperCase()}`);
-    doc.text(`Ward: ${item.ward || "-"}`);
-    doc.text(`Address: ${item.address || "-"}`);
-    doc.text(`Created At: ${item.createdAt ? new Date(item.createdAt).toLocaleString() : "-"}`);
-    doc.text(`Updated At: ${item.updatedAt ? new Date(item.updatedAt).toLocaleString() : "-"}`);
-
-    if (item.verifiedAt) {
-      doc.text(`Verified At: ${new Date(item.verifiedAt).toLocaleString()}`);
-    }
-
-    if (item.status === "rejected") {
-      doc.moveDown();
-      doc.fontSize(13).text("Rejection Reason", { underline: true });
-      doc.fontSize(12).text(item.rejectionReason || "-");
-    }
-
-    doc.moveDown();
-    doc.fontSize(13).text("Members", { underline: true });
-    doc.moveDown(0.5);
-
-    if (!item.members?.length) {
-      doc.fontSize(12).text("No members added.");
-    } else {
-      item.members.forEach((m, index) => {
-        doc.fontSize(12).text(
-          `${index + 1}. ${m.name || "-"} | Age: ${m.age ?? "-"} | Gender: ${m.gender || "-"}`
-        );
-      });
-    }
-
-    doc.moveDown();
-    doc.fontSize(13).text("Documents", { underline: true });
-    doc.moveDown(0.5);
-
-    if (!item.documents?.length) {
-      doc.fontSize(12).text("No documents uploaded.");
-    } else {
-      item.documents.forEach((d, index) => {
-        doc.fontSize(12).text(`${index + 1}. ${d.originalName || d.type || "Document"}`);
-      });
-    }
-
-    doc.end();
-  } catch (err) {
-    return res.status(500).json({ message: err.message || "Failed to export report PDF" });
   }
 }

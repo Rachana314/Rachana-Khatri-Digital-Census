@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FiEye, FiEyeOff } from "react-icons/fi";
+import { apiFetch } from "../../lib/api";
 
 export default function AdminRegister() {
   const nav = useNavigate();
@@ -9,6 +10,7 @@ export default function AdminRegister() {
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -35,9 +37,11 @@ export default function AdminRegister() {
     const v = e.target.value;
     setRole(v);
 
-    if (v === "USER") return nav("/register");
+    if (v === "USER") {
+      nav("/register");
+      return;
+    }
 
-    // reset otp states
     setOtpSent(false);
     setOtp("");
     setOtpVerified(false);
@@ -48,32 +52,29 @@ export default function AdminRegister() {
 
     if (!name.trim()) return alert("Name is required");
     if (!email.trim() || !isValidEmail(email)) return alert("Enter a valid email");
+    if (!phone.trim()) return alert("Phone is required");
     if (password.length < 8) return alert("Password must be at least 8 characters");
     if (password !== confirmPassword) return alert("Passwords do not match");
 
     try {
       setLoadingRegister(true);
 
-      const res = await fetch("http://localhost:5000/api/auth/admin/register", {
+      const data = await apiFetch("/api/auth/admin/register", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name.trim(),
           email: email.trim().toLowerCase(),
+          phone: phone.trim(),
           password,
-          roles: ["ADMIN"], // ✅ enforce admin role
+          roles: ["ADMIN"],
         }),
       });
 
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) return alert(data.msg || data.message || "Registration failed");
-
       setOtpSent(true);
-      alert(data.msg || "Admin registered. OTP sent to email.");
-      if (data.devOtp) console.log("DEV OTP:", data.devOtp);
+      alert(data.message || "Admin registered. OTP sent to email.");
     } catch (err) {
       console.error(err);
-      alert("Server error (cannot reach backend)");
+      alert(err.message || "Registration failed");
     } finally {
       setLoadingRegister(false);
     }
@@ -86,24 +87,20 @@ export default function AdminRegister() {
     try {
       setLoadingVerify(true);
 
-      const res = await fetch("http://localhost:5000/api/auth/admin/verify-otp", {
+      const data = await apiFetch("/api/auth/admin/verify-otp", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
           verificationCode: otp,
         }),
       });
 
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) return alert(data.message || data.msg || "OTP verification failed");
-
       setOtpVerified(true);
       alert(data.message || "Admin email verified. Now login.");
       nav("/admin/login");
     } catch (err) {
       console.error(err);
-      alert("Server error (cannot reach backend)");
+      alert(err.message || "OTP verification failed");
     } finally {
       setLoadingVerify(false);
     }
@@ -115,20 +112,17 @@ export default function AdminRegister() {
     try {
       setLoadingResend(true);
 
-      const res = await fetch("http://localhost:5000/api/auth/admin/request-otp", {
+      const data = await apiFetch("/api/auth/admin/request-otp", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+        }),
       });
 
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) return alert(data.message || data.msg || "Resend OTP failed");
-
       alert(data.message || "OTP resent");
-      if (data.devOtp) console.log("DEV OTP:", data.devOtp);
     } catch (err) {
       console.error(err);
-      alert("Server error (cannot reach backend)");
+      alert(err.message || "Resend OTP failed");
     } finally {
       setLoadingResend(false);
     }
@@ -140,7 +134,6 @@ export default function AdminRegister() {
         <h1 className="text-2xl font-extrabold">Admin Register</h1>
 
         <form onSubmit={register} className="mt-6 grid gap-4">
-          {/* Role selector */}
           <div>
             <label className="text-sm font-bold text-black/80">Role</label>
             <select
@@ -167,6 +160,15 @@ export default function AdminRegister() {
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            disabled={otpSent}
+            className="rounded-2xl border px-4 py-3"
+          />
+
+          <input
+            type="text"
+            placeholder="Phone"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
             disabled={otpSent}
             className="rounded-2xl border px-4 py-3"
           />

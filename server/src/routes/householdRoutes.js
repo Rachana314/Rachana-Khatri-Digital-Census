@@ -9,22 +9,28 @@ import {
   updateHousehold,
   submitHousehold,
   uploadDocument,
-  deleteHousehold, // ✅ IMPORTANT
+  deleteHousehold,
 } from "../controller/householdController.js";
 
 const router = express.Router();
 
 router.get("/", authMiddleware, listHouseholds);
+
 router.post("/", authMiddleware, createHousehold);
 
 router.get("/:householdId", authMiddleware, getHousehold);
+
 router.put("/:householdId", authMiddleware, updateHousehold);
 
 router.post("/:householdId/submit", authMiddleware, submitHousehold);
 
-router.post("/:householdId/documents", authMiddleware, upload.single("file"), uploadDocument);
+router.post(
+  "/:householdId/documents",
+  authMiddleware,
+  upload.single("file"),
+  uploadDocument
+);
 
-// ✅ delete until verified
 router.delete("/:householdId", authMiddleware, deleteHousehold);
 
 export default router;

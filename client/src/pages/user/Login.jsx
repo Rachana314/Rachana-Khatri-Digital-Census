@@ -83,6 +83,12 @@ export default function Login() {
             </button>
           </div>
 
+          <div className="text-right">
+            <Link to="/forgot-password" className="text-sm font-semibold text-red-600">
+              Forgot Password?
+            </Link>
+          </div>
+
           <button
             disabled={loading}
             className="rounded-2xl bg-red-600 text-white py-3 font-bold disabled:opacity-60"

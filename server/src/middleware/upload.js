@@ -2,9 +2,11 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 
-
 const uploadDir = path.join(process.cwd(), "uploads");
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
@@ -20,7 +22,10 @@ function fileFilter(req, file, cb) {
     file.mimetype.startsWith("image/") ||
     file.mimetype === "application/pdf";
 
-  if (!ok) return cb(new Error("Only images or PDF allowed"), false);
+  if (!ok) {
+    return cb(new Error("Only images or PDF allowed"), false);
+  }
+
   cb(null, true);
 }
 
