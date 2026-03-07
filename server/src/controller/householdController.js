@@ -51,6 +51,7 @@ export async function createHousehold(req, res) {
     }
 
     const already = await Household.findOne({ user: req.user._id });
+
     if (already) {
       return res.status(400).json({
         message: `You already have a household form (${already.householdId}). Only one form is allowed.`,

@@ -14,9 +14,26 @@ export default function HouseholdNew() {
   const [householdId, setHouseholdId] = useState(null);
   const [status, setStatus] = useState("draft");
 
+  // Main household information
   const [household, setHousehold] = useState({ ward: "", address: "" });
+
+  // Household members list
   const [members, setMembers] = useState([]);
-  const [memberDraft, setMemberDraft] = useState({ name: "", age: "", gender: "Male" });
+
+  // Draft state for one member before adding to members list
+  // Added more demographic fields for analytics use in admin dashboard
+  const [memberDraft, setMemberDraft] = useState({
+    name: "",
+    age: "",
+    gender: "Male",
+    maritalStatus: "Single",
+    education: "",
+    occupation: "",
+    disability: false,
+    disabilityDetail: "",
+  });
+
+  // Uploaded documents
   const [documents, setDocuments] = useState([]);
 
   const [loadingEdit, setLoadingEdit] = useState(false);
@@ -24,6 +41,7 @@ export default function HouseholdNew() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
 
+  // Verified data cannot be edited
   const canEdit = status !== "verified";
 
   useEffect(() => {
@@ -38,7 +56,10 @@ export default function HouseholdNew() {
 
         setHouseholdId(data.householdId);
         setStatus(data.status || "draft");
-        setHousehold({ ward: data.ward || "", address: data.address || "" });
+        setHousehold({
+          ward: data.ward || "",
+          address: data.address || "",
+        });
         setMembers(Array.isArray(data.members) ? data.members : []);
         setDocuments(Array.isArray(data.documents) ? data.documents : []);
 
@@ -55,7 +76,8 @@ export default function HouseholdNew() {
     load();
   }, [editId, navigate]);
 
-  const hasPhoto = Array.isArray(documents) && documents.some((doc) => doc?.type === "Photo");
+  const hasPhoto =
+    Array.isArray(documents) && documents.some((doc) => doc?.type === "Photo");
 
   const validateStep = (s) => {
     if (s === 0) {
@@ -65,6 +87,7 @@ export default function HouseholdNew() {
 
     if (s === 1) {
       if (members.length === 0) throw new Error("Add at least one member.");
+
       for (let i = 0; i < members.length; i++) {
         if (!String(members[i]?.name || "").trim()) {
           throw new Error(`Member ${i + 1}: Name is required.`);
@@ -77,6 +100,7 @@ export default function HouseholdNew() {
     }
   };
 
+  // Save current form as draft
   const saveDraft = async () => {
     if (!canEdit) throw new Error("This record is verified. You cannot edit.");
 
@@ -133,6 +157,8 @@ export default function HouseholdNew() {
 
   const back = () => setStep((x) => Math.max(x - 1, 0));
 
+  // Add member to members list
+  // Includes demographic fields needed for analytics charts later
   const addMember = () => {
     if (!canEdit) return;
     setError("");
@@ -151,10 +177,27 @@ export default function HouseholdNew() {
         name,
         age,
         gender: memberDraft.gender || "Male",
+        maritalStatus: memberDraft.maritalStatus || "Single",
+        education: memberDraft.education.trim(),
+        occupation: memberDraft.occupation.trim(),
+        disability: !!memberDraft.disability,
+        disabilityDetail: memberDraft.disability
+          ? memberDraft.disabilityDetail.trim()
+          : "",
       },
     ]);
 
-    setMemberDraft({ name: "", age: "", gender: "Male" });
+    // Reset member draft after adding
+    setMemberDraft({
+      name: "",
+      age: "",
+      gender: "Male",
+      maritalStatus: "Single",
+      education: "",
+      occupation: "",
+      disability: false,
+      disabilityDetail: "",
+    });
   };
 
   const removeMember = (idx) => {
@@ -162,6 +205,7 @@ export default function HouseholdNew() {
     setMembers((prev) => prev.filter((_, i) => i !== idx));
   };
 
+  // Upload household photo
   const uploadPhoto = async (file) => {
     if (!canEdit || !file) return;
 
@@ -190,6 +234,7 @@ export default function HouseholdNew() {
     }
   };
 
+  // Submit final household form
   const submit = async () => {
     if (!canEdit || saving || uploading) return;
 
@@ -286,7 +331,9 @@ export default function HouseholdNew() {
                   disabled={!canEdit}
                   className="mt-2 w-full rounded-2xl border p-3 disabled:bg-zinc-100"
                   value={household.ward}
-                  onChange={(e) => setHousehold({ ...household, ward: e.target.value })}
+                  onChange={(e) =>
+                    setHousehold({ ...household, ward: e.target.value })
+                  }
                 />
               </div>
 
@@ -296,7 +343,9 @@ export default function HouseholdNew() {
                   disabled={!canEdit}
                   className="mt-2 w-full rounded-2xl border p-3 disabled:bg-zinc-100"
                   value={household.address}
-                  onChange={(e) => setHousehold({ ...household, address: e.target.value })}
+                  onChange={(e) =>
+                    setHousehold({ ...household, address: e.target.value })
+                  }
                 />
               </div>
             </div>
@@ -304,31 +353,114 @@ export default function HouseholdNew() {
 
           {step === 1 && (
             <div className="space-y-5">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Expanded member fields for analytics */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <input
                   disabled={!canEdit}
                   className="rounded-2xl border p-3 disabled:bg-zinc-100"
                   placeholder="Name"
                   value={memberDraft.name}
-                  onChange={(e) => setMemberDraft({ ...memberDraft, name: e.target.value })}
+                  onChange={(e) =>
+                    setMemberDraft({ ...memberDraft, name: e.target.value })
+                  }
                 />
+
                 <input
                   disabled={!canEdit}
+                  type="number"
                   className="rounded-2xl border p-3 disabled:bg-zinc-100"
                   placeholder="Age"
                   value={memberDraft.age}
-                  onChange={(e) => setMemberDraft({ ...memberDraft, age: e.target.value })}
+                  onChange={(e) =>
+                    setMemberDraft({ ...memberDraft, age: e.target.value })
+                  }
                 />
+
                 <select
                   disabled={!canEdit}
                   className="rounded-2xl border p-3 disabled:bg-zinc-100"
                   value={memberDraft.gender}
-                  onChange={(e) => setMemberDraft({ ...memberDraft, gender: e.target.value })}
+                  onChange={(e) =>
+                    setMemberDraft({ ...memberDraft, gender: e.target.value })
+                  }
                 >
-                  <option>Male</option>
-                  <option>Female</option>
-                  <option>Other</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
                 </select>
+
+                <select
+                  disabled={!canEdit}
+                  className="rounded-2xl border p-3 disabled:bg-zinc-100"
+                  value={memberDraft.maritalStatus}
+                  onChange={(e) =>
+                    setMemberDraft({
+                      ...memberDraft,
+                      maritalStatus: e.target.value,
+                    })
+                  }
+                >
+                  <option value="Single">Single</option>
+                  <option value="Married">Married</option>
+                  <option value="Widowed">Widowed</option>
+                  <option value="Divorced">Divorced</option>
+                </select>
+
+                <input
+                  disabled={!canEdit}
+                  className="rounded-2xl border p-3 disabled:bg-zinc-100"
+                  placeholder="Education"
+                  value={memberDraft.education}
+                  onChange={(e) =>
+                    setMemberDraft({
+                      ...memberDraft,
+                      education: e.target.value,
+                    })
+                  }
+                />
+
+                <input
+                  disabled={!canEdit}
+                  className="rounded-2xl border p-3 disabled:bg-zinc-100"
+                  placeholder="Occupation"
+                  value={memberDraft.occupation}
+                  onChange={(e) =>
+                    setMemberDraft({
+                      ...memberDraft,
+                      occupation: e.target.value,
+                    })
+                  }
+                />
+
+                <label className="flex items-center gap-2 rounded-2xl border p-3">
+                  <input
+                    disabled={!canEdit}
+                    type="checkbox"
+                    checked={memberDraft.disability}
+                    onChange={(e) =>
+                      setMemberDraft({
+                        ...memberDraft,
+                        disability: e.target.checked,
+                      })
+                    }
+                  />
+                  Disability
+                </label>
+
+                {memberDraft.disability && (
+                  <input
+                    disabled={!canEdit}
+                    className="rounded-2xl border p-3 sm:col-span-2"
+                    placeholder="Disability Detail"
+                    value={memberDraft.disabilityDetail}
+                    onChange={(e) =>
+                      setMemberDraft({
+                        ...memberDraft,
+                        disabilityDetail: e.target.value,
+                      })
+                    }
+                  />
+                )}
               </div>
 
               <button
@@ -341,10 +473,30 @@ export default function HouseholdNew() {
 
               <div className="space-y-2">
                 {members.map((m, i) => (
-                  <div key={i} className="rounded-2xl border p-3 flex justify-between gap-3">
+                  <div
+                    key={i}
+                    className="rounded-2xl border p-3 flex justify-between gap-3"
+                  >
                     <div className="font-semibold">
                       {m.name} {m.age ? `(${m.age})` : ""} — {m.gender}
+
+                      <div className="text-sm text-black/60 mt-1">
+                        Marital: {m.maritalStatus || "-"} | Education:{" "}
+                        {m.education || "-"} | Occupation: {m.occupation || "-"}
+                      </div>
+
+                      <div className="text-sm text-black/60">
+                        Disability:{" "}
+                        {m.disability
+                          ? `Yes${
+                              m.disabilityDetail
+                                ? ` (${m.disabilityDetail})`
+                                : ""
+                            }`
+                          : "No"}
+                      </div>
                     </div>
+
                     <button
                       disabled={!canEdit}
                       onClick={() => removeMember(i)}
@@ -369,7 +521,9 @@ export default function HouseholdNew() {
                   onChange={(e) => uploadPhoto(e.target.files?.[0])}
                 />
                 {uploading && (
-                  <div className="mt-2 text-sm font-bold text-black/60">Uploading...</div>
+                  <div className="mt-2 text-sm font-bold text-black/60">
+                    Uploading...
+                  </div>
                 )}
               </div>
 
@@ -382,7 +536,9 @@ export default function HouseholdNew() {
                     </div>
                   ))
                 ) : (
-                  <div className="text-sm text-black/60 font-semibold">No photo uploaded yet.</div>
+                  <div className="text-sm text-black/60 font-semibold">
+                    No photo uploaded yet.
+                  </div>
                 )}
               </div>
             </div>
@@ -399,8 +555,22 @@ export default function HouseholdNew() {
               <div className="rounded-2xl border p-4">
                 <div className="font-extrabold mb-2">Members</div>
                 {members.map((m, i) => (
-                  <div key={i} className="text-sm">
-                    {i + 1}. {m.name} {m.age ? `(${m.age})` : ""} — {m.gender}
+                  <div key={i} className="text-sm mb-2">
+                    <div>
+                      {i + 1}. {m.name} {m.age ? `(${m.age})` : ""} — {m.gender}
+                    </div>
+                    <div className="text-black/60">
+                      Marital: {m.maritalStatus || "-"} | Education:{" "}
+                      {m.education || "-"} | Occupation: {m.occupation || "-"}
+                    </div>
+                    <div className="text-black/60">
+                      Disability:{" "}
+                      {m.disability
+                        ? `Yes${
+                            m.disabilityDetail ? ` (${m.disabilityDetail})` : ""
+                          }`
+                        : "No"}
+                    </div>
                   </div>
                 ))}
               </div>

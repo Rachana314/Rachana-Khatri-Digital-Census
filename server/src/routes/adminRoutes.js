@@ -8,6 +8,7 @@ import {
   adminRejectHousehold,
   adminRequestCorrection,
   adminProgress,
+  adminAnalytics,
 } from "../controller/adminController.js";
 
 const router = express.Router();
@@ -20,5 +21,6 @@ router.patch("/households/:id/verify", adminVerifyHousehold);
 router.patch("/households/:id/reject", adminRejectHousehold);
 router.patch("/households/:id/correction", adminRequestCorrection);
 router.get("/progress", adminProgress);
+router.get("/analytics", adminAnalytics);
 
 export default router;
