@@ -44,7 +44,7 @@ export async function adminListHouseholds(req, res) {
 // ADMIN: GET SINGLE HOUSEHOLD
 export async function adminGetHouseholdById(req, res) {
   try {
-    const item = await Household.findById(req.params.id)
+    const item = await Household.findOne({ householdId: req.params.id })
       .populate("user", "name email")
       .populate("verifiedBy", "name email");
 
@@ -66,7 +66,7 @@ export async function adminGetHouseholdById(req, res) {
 // ADMIN: VERIFY HOUSEHOLD
 export async function adminVerifyHousehold(req, res) {
   try {
-    const item = await Household.findById(req.params.id);
+    const item = await Household.findOne({ householdId: req.params.id });
 
     if (!item) {
       return res.status(404).json({
@@ -118,7 +118,7 @@ export async function adminRejectHousehold(req, res) {
       });
     }
 
-    const item = await Household.findById(req.params.id);
+    const item = await Household.findOne({ householdId: req.params.id });
 
     if (!item) {
       return res.status(404).json({
@@ -170,7 +170,7 @@ export async function adminRequestCorrection(req, res) {
       });
     }
 
-    const item = await Household.findById(req.params.id);
+    const item = await Household.findOne({ householdId: req.params.id });
 
     if (!item) {
       return res.status(404).json({
@@ -236,6 +236,155 @@ export async function adminProgress(req, res) {
     console.error("🔥 adminProgress:", err.message);
     return res.status(500).json({
       message: err.message || "Failed to fetch progress",
+    });
+  }
+}
+
+// ADMIN: ANALYTICS
+export async function adminAnalytics(req, res) {
+  try {
+    const households = await Household.find({}).lean();
+
+    const analytics = {
+      totalHouseholds: households.length,
+      totalPopulation: 0,
+      averageHouseholdSize: 0,
+
+      statusBreakdown: {
+        draft: 0,
+        submitted: 0,
+        correction_required: 0,
+        rejected: 0,
+        verified: 0,
+      },
+
+      genderBreakdown: {
+        Male: 0,
+        Female: 0,
+        Other: 0,
+      },
+
+      ageBreakdown: {
+        children: 0,
+        adults: 0,
+        seniors: 0,
+      },
+
+      disability: {
+        householdsWithDisability: 0,
+        totalDisabledMembers: 0,
+      },
+
+      wardStats: {},
+      educationBreakdown: {},
+      occupationBreakdown: {},
+    };
+
+    for (const household of households) {
+      const members = Array.isArray(household.members) ? household.members : [];
+      const ward = household.ward || "Unknown";
+      const status = household.status || "draft";
+
+      analytics.statusBreakdown[status] =
+        (analytics.statusBreakdown[status] || 0) + 1;
+
+      if (!analytics.wardStats[ward]) {
+        analytics.wardStats[ward] = {
+          households: 0,
+          population: 0,
+          male: 0,
+          female: 0,
+          other: 0,
+          verified: 0,
+          submitted: 0,
+          rejected: 0,
+          draft: 0,
+          correction_required: 0,
+        };
+      }
+
+      analytics.wardStats[ward].households += 1;
+      analytics.wardStats[ward][status] =
+        (analytics.wardStats[ward][status] || 0) + 1;
+
+      let householdHasDisability = false;
+
+      for (const member of members) {
+        analytics.totalPopulation += 1;
+        analytics.wardStats[ward].population += 1;
+
+        const gender = member.gender || "Other";
+        analytics.genderBreakdown[gender] =
+          (analytics.genderBreakdown[gender] || 0) + 1;
+
+        if (gender === "Male") analytics.wardStats[ward].male += 1;
+        else if (gender === "Female") analytics.wardStats[ward].female += 1;
+        else analytics.wardStats[ward].other += 1;
+
+        const age = Number(member.age);
+        if (!Number.isNaN(age) && age >= 0) {
+          if (age <= 17) analytics.ageBreakdown.children += 1;
+          else if (age <= 59) analytics.ageBreakdown.adults += 1;
+          else analytics.ageBreakdown.seniors += 1;
+        }
+
+        if (member.disability) {
+          analytics.disability.totalDisabledMembers += 1;
+          householdHasDisability = true;
+        }
+
+        const education = (member.education || "").trim();
+        if (education) {
+          analytics.educationBreakdown[education] =
+            (analytics.educationBreakdown[education] || 0) + 1;
+        }
+
+        const occupation = (member.occupation || "").trim();
+        if (occupation) {
+          analytics.occupationBreakdown[occupation] =
+            (analytics.occupationBreakdown[occupation] || 0) + 1;
+        }
+      }
+
+      if (householdHasDisability) {
+        analytics.disability.householdsWithDisability += 1;
+      }
+    }
+
+    analytics.averageHouseholdSize =
+      analytics.totalHouseholds > 0
+        ? Number((analytics.totalPopulation / analytics.totalHouseholds).toFixed(2))
+        : 0;
+
+    const wards = Object.entries(analytics.wardStats).map(([ward, value]) => ({
+      ward,
+      ...value,
+    }));
+
+    const educationBreakdown = Object.entries(analytics.educationBreakdown)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+
+    const occupationBreakdown = Object.entries(analytics.occupationBreakdown)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+
+    return res.json({
+      totalHouseholds: analytics.totalHouseholds,
+      totalPopulation: analytics.totalPopulation,
+      averageHouseholdSize: analytics.averageHouseholdSize,
+      statusBreakdown: analytics.statusBreakdown,
+      genderBreakdown: analytics.genderBreakdown,
+      ageBreakdown: analytics.ageBreakdown,
+      disability: analytics.disability,
+      wards,
+      educationBreakdown,
+      occupationBreakdown,
+    });
+  } catch (err) {
+    console.error("🔥 adminAnalytics:", err.message);
+    return res.status(500).json({
+      message: err.message || "Failed to fetch analytics",
     });
   }
 }
