@@ -17,9 +17,6 @@ dotenv.config();
 
 const app = express();
 
-// Connect Database
-connectDB();
-
 // Middleware
 app.use(
   cors({
@@ -36,10 +33,8 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Static uploads folder
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
-// API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/households", householdRoutes);
 app.use("/api/notifications", notificationRoutes);
@@ -47,19 +42,14 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/public", publicRoutes);
 
-// Root route
 app.get("/", (req, res) => {
   res.send("API Running");
 });
 
-// 404 handler
 app.use((req, res) => {
-  res.status(404).json({
-    message: "Route not found",
-  });
+  res.status(404).json({ message: "Route not found" });
 });
 
-// Global error handler
 app.use((err, req, res, next) => {
   console.error("Unhandled server error:", err);
   res.status(500).json({
@@ -67,7 +57,16 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server
-app.listen(config.port, "0.0.0.0", () => {
-  console.log(`🚀 Server running on port ${config.port}`);
-});
+const startServer = async () => {
+  try {
+    await connectDB();
+    app.listen(config.port, "0.0.0.0", () => {
+      console.log(`🚀 Server running on port ${config.port}`);
+    });
+  } catch (error) {
+    console.error("Failed to start server:", error.message);
+    process.exit(1);
+  }
+};
+
+startServer();
