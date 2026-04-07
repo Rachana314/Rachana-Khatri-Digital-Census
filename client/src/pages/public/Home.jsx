@@ -443,7 +443,7 @@ export default function Home() {
                   </div>
                   <div>
                     <p className="font-extrabold text-brandBlack">Call us</p>
-                    <p className="text-black/60">01-XXXXXXX</p>
+                    <p className="text-black/60">021-555231</p>
                   </div>
                 </div>
 
