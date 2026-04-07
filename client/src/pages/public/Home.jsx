@@ -414,68 +414,75 @@ export default function Home() {
 
 
 
-      {/* CONTACT */}
-      <section
-        id="contact"
-        className="scroll-mt-24 relative overflow-hidden"
-        style={{
-          backgroundImage: `url(${contactImg})`,
-          backgroundSize: "cover",
-          backgroundPosition: "left center",
-          backgroundRepeat: "no-repeat",
-        }}
-      >
-        {/* Soft overlay so text is readable */}
-        <div className="absolute inset-0 bg-white/80 backdrop-blur-[2px]" />
+        {/* CONTACT */}
+        <section
+          id="contact"
+          className="scroll-mt-24 relative overflow-hidden"
+          style={{
+            backgroundImage: `url(${contactImg})`,
+            backgroundSize: "cover",
+            backgroundPosition: "left center",
+            backgroundRepeat: "no-repeat",
+          }}
+        >
+          <div className="absolute inset-0 bg-white/80 backdrop-blur-[2px]" />
 
-        <div className="relative max-w-6xl mx-auto px-4 py-20">
-          <div className="lg:ml-auto lg:max-w-xl">
+          <div className="relative max-w-6xl mx-auto px-4 py-20">
+            <div className="lg:ml-auto lg:max-w-xl">
+              <h2 className="mt-2 text-3xl sm:text-5xl font-extrabold text-brandBlack">
+                Get Support From Here!.
+              </h2>
 
-            <h2 className="mt-2 text-3xl sm:text-5xl font-extrabold text-brandBlack">
-              Get Support From Here!.
-            </h2>
+              <div className="mt-4 h-[4px] w-full rounded-full bg-gradient-to-r from-brandBlue to-brandRed" />
 
-            {/* Gradient line */}
-            <div className="mt-4 h-[4px] w-full rounded-full bg-gradient-to-r from-brandBlue to-brandRed" />
-
-            <div className="mt-10 space-y-8">
-              {/* Phone */}
-              <div className="flex gap-4 items-start">
-                <div className="h-12 w-12 rounded-full bg-white shadow border border-black/10 flex items-center justify-center">
-                  <span className="text-xl">📞</span>
+              <div className="mt-10 space-y-8">
+                {/* Phone */}
+                <div className="flex gap-4 items-start">
+                  <div className="h-12 w-12 rounded-full bg-white shadow border border-black/10 flex items-center justify-center">
+                    <span className="text-xl">📞</span>
+                  </div>
+                  <div>
+                    <p className="font-extrabold text-brandBlack">Call us</p>
+                    <p className="text-black/60">01-XXXXXXX</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-extrabold text-brandBlack">Call us</p>
-                  <p className="text-black/60">01-XXXXXXX</p>
-                </div>
-              </div>
 
-              {/* Email */}
-              <div className="flex gap-4 items-start">
-                <div className="h-12 w-12 rounded-full bg-white shadow border border-black/10 flex items-center justify-center">
-                  <span className="text-xl">✉️</span>
+                {/* Email - FIXED POPUP */}
+                <div className="flex gap-4 items-start">
+                  <div className="h-12 w-12 rounded-full bg-white shadow border border-black/10 flex items-center justify-center">
+                    <span className="text-xl">✉️</span>
+                  </div>
+                  <div>
+                    <p className="font-extrabold text-brandBlack">Email</p>
+                    <button 
+                      onClick={() => {
+                        window.open(
+                          "https://mail.google.com/mail/?view=cm&fs=1&to=digitalcensus4@gmail.com",
+                          "GmailCompose",
+                          "width=600,height=700,left=300,top=100"
+                        );
+                      }}
+                      className="text-black/60 hover:text-brandBlue transition-colors text-left"
+                    >
+                      digitalcensus4@gmail.com
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-extrabold text-brandBlack">Email</p>
-                  <p className="text-black/60">helpdesk@digitalcensus.gov.np</p>
-                </div>
-              </div>
 
-              {/* Location */}
-              <div className="flex gap-4 items-start">
-                <div className="h-12 w-12 rounded-full bg-white shadow border border-black/10 flex items-center justify-center">
-                  <span className="text-xl">📍</span>
-                </div>
-                <div>
-                  <p className="font-extrabold text-brandBlack">Location</p>
-                  <p className="text-black/60">Your Municipality, Nepal</p>
+                {/* Location */}
+                <div className="flex gap-4 items-start">
+                  <div className="h-12 w-12 rounded-full bg-white shadow border border-black/10 flex items-center justify-center">
+                    <span className="text-xl">📍</span>
+                  </div>
+                  <div>
+                    <p className="font-extrabold text-brandBlack">Location</p>
+                    <p className="text-black/60">Your Municipality, Nepal</p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
-
+        </section>
     </div>
   );
 }
