@@ -234,6 +234,29 @@ export async function uploadDocument(req, res) {
   }
 }
 
+// to make the request to admin about adding the new born and delete the died one details
+export async function requestHouseholdChange(req, res) {
+  try {
+    const { householdId } = req.params;
+    const { type, memberId, note } = req.body;
+
+    const item = await Household.findOne({ householdId, user: req.user._id });
+    if (!item) return res.status(404).json({ message: "Household not found" });
+
+    // Create a notification for the ADMIN
+    await Notification.create({
+      user: item.user, // or your admin ID
+      type: "change_request",
+      title: `Change Request: ${type}`,
+      msg: `Household ${householdId} requested a ${type}. Note: ${note}`,
+    });
+
+    return res.json({ message: "Request sent to admin successfully" });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+}
+
 // DELETE HOUSEHOLD
 export async function deleteHousehold(req, res) {
   try {
@@ -241,6 +264,7 @@ export async function deleteHousehold(req, res) {
       householdId: req.params.householdId,
       user: req.user._id,
     });
+    
 
     if (!item) {
       return res.status(404).json({ message: "Not found" });
@@ -253,6 +277,8 @@ export async function deleteHousehold(req, res) {
     }
 
     await Household.deleteOne({ _id: item._id });
+
+    
 
     await Notification.create({
       user: req.user._id,

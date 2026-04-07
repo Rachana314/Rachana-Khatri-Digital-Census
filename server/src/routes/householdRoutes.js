@@ -33,5 +33,6 @@ router.post(
 
 router.delete("/:householdId", authMiddleware, deleteHousehold);
 
+
 export default router;
 

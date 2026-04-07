@@ -351,76 +351,52 @@ export default function HouseholdView() {
             )}
 
             {reqType === "add_newborn" && (
-              <div className="rounded-3xl border p-5 space-y-4">
-                <div className="font-extrabold">Add newborn request</div>
+            <div className="rounded-3xl border p-5 space-y-4">
+              <div className="font-extrabold text-lg">Add newborn request</div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="font-extrabold text-sm">Full name</label>
-                    <input
-                      className="mt-2 rounded-2xl border p-3 w-full"
-                      value={newborn.name}
-                      onChange={(e) =>
-                        setNewborn((p) => ({ ...p, name: e.target.value }))
-                      }
-                      placeholder="newborn name"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="font-extrabold text-sm">Age</label>
-                    <input
-                      type="number"
-                      className="mt-2 rounded-2xl border p-3 w-full"
-                      value={newborn.age}
-                      onChange={(e) =>
-                        setNewborn((p) => ({ ...p, age: Number(e.target.value) }))
-                      }
-                      placeholder="0"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="font-extrabold text-sm">Gender</label>
-                    <select
-                      className="mt-2 rounded-2xl border p-3 w-full"
-                      value={newborn.gender}
-                      onChange={(e) =>
-                        setNewborn((p) => ({ ...p, gender: e.target.value }))
-                      }
-                    >
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="font-extrabold text-sm">Marital Status</label>
-                    <select
-                      className="mt-2 rounded-2xl border p-3 w-full"
-                      value={newborn.maritalStatus}
-                      onChange={(e) =>
-                        setNewborn((p) => ({ ...p, maritalStatus: e.target.value }))
-                      }
-                    >
-                      <option value="Single">Single</option>
-                      <option value="Married">Married</option>
-                      <option value="Divorced">Divorced</option>
-                      <option value="Widowed">Widowed</option>
-                    </select>
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Name Field */}
+                <div>
+                  <label className="font-extrabold text-sm">Full name</label>
+                  <input
+                    className="mt-2 rounded-2xl border p-3 w-full"
+                    value={newborn.name}
+                    onChange={(e) =>
+                      setNewborn((p) => ({ ...p, name: e.target.value }))
+                    }
+                    placeholder="Newborn name"
+                  />
                 </div>
 
-                <label className="font-extrabold text-sm">Note</label>
+                {/* Gender Field */}
+                <div>
+                  <label className="font-extrabold text-sm">Gender</label>
+                  <select
+                    className="mt-2 rounded-2xl border p-3 w-full"
+                    value={newborn.gender}
+                    onChange={(e) =>
+                      setNewborn((p) => ({ ...p, gender: e.target.value }))
+                    }
+                  >
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Date of Birth Field (Formerly Note) */}
+              <div>
+                <label className="font-extrabold text-sm">Date of Birth</label>
                 <input
-                  className="rounded-2xl border p-3 w-full"
+                  type="date" // Changed to date type for better UX
+                  className="mt-2 rounded-2xl border p-3 w-full"
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  placeholder="example: born on 2026-02-20"
                 />
               </div>
-            )}
+            </div>
+          )}
 
             <button
               onClick={sendRequest}

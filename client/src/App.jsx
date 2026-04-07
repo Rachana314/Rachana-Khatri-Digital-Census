@@ -28,6 +28,7 @@ import AdminHouseholds from "./pages/admin/AdminHouseholds";
 import AdminHouseholdView from "./pages/admin/HouseholdView";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminReports from "./pages/admin/AdminReports";
+import AdminNotifications from "./pages/admin/AdminNotifications";
 
 // User
 import UserLayout from "./components/layout/UserLayout";
@@ -83,6 +84,8 @@ export default function App() {
           />
           <Route path="analytics" element={<AdminAnalytics />} />
           <Route path="reports" element={<AdminReports />} />
+          <Route path="notifications" element={<AdminNotifications />} />
+
         </Route>
 
         <Route

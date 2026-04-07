@@ -258,7 +258,7 @@ export default function Dashboard() {
             </div>
           </Card>
 
-          <Card title={t("dashboard.qrCode")} right={household.status === "verified" ? <StatusBadge status="verified" /> : null}>
+          {/* <Card title={t("dashboard.qrCode")} right={household.status === "verified" ? <StatusBadge status="verified" /> : null}>
             <p className="text-sm font-medium text-zinc-600">{t("dashboard.qrDesc")}</p>
 
             <div className="mt-4 rounded-2xl border border-dashed border-black/15 bg-zinc-50 p-6 flex items-center justify-center">
@@ -273,6 +273,7 @@ export default function Dashboard() {
               </PrimaryBtn>
             </div>
           </Card>
+          */} 
 
           <Card
             title={t("notifications.recent")}

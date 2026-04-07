@@ -1,6 +1,19 @@
 import Household from "../models/Household.js";
 import Notification from "../models/Notification.js";
 
+
+export async function getAdminNotifications(req, res) {
+  try {
+    // This fetches all notifications, including the "change_request" types
+    const items = await Notification.find()
+      .sort({ createdAt: -1 }); // Newest requests first
+
+    return res.json(items);
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+}
+
 // ADMIN: LIST ALL HOUSEHOLDS
 export async function adminListHouseholds(req, res) {
   try {

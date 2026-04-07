@@ -38,9 +38,9 @@ export default function Footer() {
           <div>
             <h4 className="text-lg font-bold mb-4 text-white">Contact</h4>
             <p className="text-sm sm:text-base text-white/90 leading-relaxed">
-              Ward Office / Municipality Name <br />
-              Phone: 01-XXXXXXX <br />
-              Email: support@digitalcensus.local <br />
+              PathariSanishchare-9 <br />
+              Phone: 021-555231<br />
+              Email: digitalcensus4@gmail.com <br />
               Sun–Fri, 10 AM – 5 PM
             </p>
           </div>

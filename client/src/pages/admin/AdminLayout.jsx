@@ -5,6 +5,7 @@ const nav = [
   { to: "/admin/households", label: "Households" },
   { to: "/admin/analytics", label: "Analytics" },
   { to: "/admin/reports", label: "Reports" },
+  { to: "/admin/notifications", label: "Notifications" },
 ];
 
 export default function AdminLayout() {
