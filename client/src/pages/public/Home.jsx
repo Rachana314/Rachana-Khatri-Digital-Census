@@ -476,7 +476,7 @@ export default function Home() {
                   </div>
                   <div>
                     <p className="font-extrabold text-brandBlack">Location</p>
-                    <p className="text-black/60">Your Municipality, Nepal</p>
+                    <p className="text-black/60">PathariSanishchare 9,Morang</p>
                   </div>
                 </div>
               </div>
