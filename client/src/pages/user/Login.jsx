@@ -58,8 +58,8 @@ export default function Login() {
 
   return (
     <div className="w-full max-w-md">
-      <div className="rounded-3xl bg-white/70 backdrop-blur border border-black/10 shadow-xl p-6 sm:p-8">
-        <h1 className="text-2xl font-extrabold">Login</h1>
+      <div className="rounded-3xl bg-white/50 backdrop-blur border border-black/10 shadow-xl p-6 sm:p-8">
+        <h1 className="text-3xl animate-bounce font-extrabold text-red-500 text-center">Login</h1>
 
         <form onSubmit={submit} className="mt-6 grid gap-4">
           <input
@@ -67,37 +67,37 @@ export default function Login() {
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="rounded-2xl border px-4 py-3"
+            className="rounded-xl border-gray-300 border px-4 py-3 w-95"
           />
 
-          <div className="flex items-center gap-2 rounded-2xl border px-4 py-3">
+          <div className="flex items-center gap-2 rounded-2xl border border-none px-4 py-3">
             <input
               type={showPw ? "text" : "password"}
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full outline-none"
+              className="w-95 relative right-4 border border-gray-300 px-4 py-3 rounded-xl"
             />
-            <button type="button" onClick={() => setShowPw(!showPw)}>
+            <button className="relative right-15" type="button" onClick={() => setShowPw(!showPw)}>
               {showPw ? <FiEyeOff /> : <FiEye />}
             </button>
           </div>
 
           <div className="text-right">
-            <Link to="/forgot-password" className="text-sm font-semibold text-red-600">
+            <Link to="/forgot-password" className="text-sm relative right-15 font-semibold text-red-600">
               Forgot Password?
             </Link>
           </div>
 
           <button
             disabled={loading}
-            className="rounded-2xl bg-red-600 text-white py-3 font-bold disabled:opacity-60"
+            className="rounded-2xl relative right-2 max-w-100 bg-red-600 text-white py-3 font-bold disabled:opacity-60"
           >
             {loading ? "Please wait..." : "Login"}
           </button>
         </form>
 
-        <p className="mt-5 text-sm">
+        <p className="mt-5 text-sm text-center">
           Don’t have an account?{" "}
           <Link to="/register" className="font-bold text-red-600">
             Register
