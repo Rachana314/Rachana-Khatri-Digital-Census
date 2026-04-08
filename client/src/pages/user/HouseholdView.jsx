@@ -85,8 +85,17 @@ export default function HouseholdView() {
 
       const payload =
         reqType === "delete_member"
-          ? { type: "delete_member", memberIndex: Number(memberIndex), note }
-          : { type: "add_newborn", newborn, note };
+          ? { 
+              type: "delete_member", 
+              memberIndex: Number(memberIndex), 
+              memberName: item.members[memberIndex]?.name,
+              note 
+            }
+          : { 
+              type: "add_newborn", 
+              newborn, 
+              note 
+            };
 
       await apiFetch(`/api/households/${id}/change-requests`, {
         method: "POST",
@@ -94,7 +103,7 @@ export default function HouseholdView() {
       });
 
       setNote("");
-      alert("Request sent to admin.");
+      alert("Request sent successfully! Admin will be notified.");
       await load();
     } catch (e) {
       setErr(e.message);
@@ -183,13 +192,11 @@ export default function HouseholdView() {
 
         <div className="rounded-3xl bg-white border shadow-sm p-6 space-y-4">
           <div className="font-extrabold text-lg">Household info</div>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="rounded-2xl border p-4">
               <div className="text-black/60 font-bold text-sm">Ward</div>
               <div className="font-extrabold text-lg">{item.ward || "-"}</div>
             </div>
-
             <div className="rounded-2xl border p-4">
               <div className="text-black/60 font-bold text-sm">Address</div>
               <div className="font-extrabold text-lg">{item.address || "-"}</div>
@@ -199,7 +206,6 @@ export default function HouseholdView() {
 
         <div className="rounded-3xl bg-white border shadow-sm p-6 space-y-4">
           <div className="font-extrabold text-lg">Members</div>
-
           {item.members?.length ? (
             <div className="space-y-3">
               {item.members.map((m, idx) => (
@@ -210,7 +216,6 @@ export default function HouseholdView() {
                     </div>
                     <div className="text-black/60 font-bold text-sm">Age: {m.age ?? "-"}</div>
                   </div>
-
                   <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm font-semibold text-black/70">
                     <div>Gender: {m.gender || "-"}</div>
                     <div>Marital: {m.maritalStatus || "-"}</div>
@@ -231,7 +236,6 @@ export default function HouseholdView() {
 
         <div className="rounded-3xl bg-white border shadow-sm p-6 space-y-4">
           <div className="font-extrabold text-lg">Documents</div>
-
           {item.documents?.length ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {item.documents.map((d, i) => {
@@ -245,7 +249,6 @@ export default function HouseholdView() {
                 return (
                   <div key={i} className="rounded-2xl border p-4 space-y-3">
                     <div className="font-extrabold">{d.type}</div>
-
                     {isImage ? (
                       <button
                         type="button"
@@ -270,19 +273,9 @@ export default function HouseholdView() {
                         Open document
                       </a>
                     )}
-
                     <div className="text-sm text-black/60 break-all">
                       {d.originalName || d.url}
                     </div>
-
-                    <a
-                      className="inline-block text-sm font-bold text-blue-700 underline"
-                      href={d.url}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Open full file
-                    </a>
                   </div>
                 );
               })}
@@ -326,7 +319,6 @@ export default function HouseholdView() {
             {reqType === "delete_member" && (
               <div className="rounded-3xl border p-5 space-y-3">
                 <div className="font-extrabold">Delete member request</div>
-
                 <label className="font-extrabold text-sm">Select member</label>
                 <select
                   className="rounded-2xl border p-3 w-full"
@@ -339,7 +331,6 @@ export default function HouseholdView() {
                     </option>
                   ))}
                 </select>
-
                 <label className="font-extrabold text-sm">Note</label>
                 <input
                   className="rounded-2xl border p-3 w-full"
@@ -351,52 +342,46 @@ export default function HouseholdView() {
             )}
 
             {reqType === "add_newborn" && (
-            <div className="rounded-3xl border p-5 space-y-4">
-              <div className="font-extrabold text-lg">Add newborn request</div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Name Field */}
+              <div className="rounded-3xl border p-5 space-y-4">
+                <div className="font-extrabold text-lg">Add newborn request</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-extrabold text-sm">Full name</label>
+                    <input
+                      className="mt-2 rounded-2xl border p-3 w-full"
+                      value={newborn.name}
+                      onChange={(e) =>
+                        setNewborn((p) => ({ ...p, name: e.target.value }))
+                      }
+                      placeholder="Newborn name"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-extrabold text-sm">Gender</label>
+                    <select
+                      className="mt-2 rounded-2xl border p-3 w-full"
+                      value={newborn.gender}
+                      onChange={(e) =>
+                        setNewborn((p) => ({ ...p, gender: e.target.value }))
+                      }
+                    >
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                </div>
                 <div>
-                  <label className="font-extrabold text-sm">Full name</label>
+                  <label className="font-extrabold text-sm">Date of Birth</label>
                   <input
+                    type="date"
                     className="mt-2 rounded-2xl border p-3 w-full"
-                    value={newborn.name}
-                    onChange={(e) =>
-                      setNewborn((p) => ({ ...p, name: e.target.value }))
-                    }
-                    placeholder="Newborn name"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
                   />
                 </div>
-
-                {/* Gender Field */}
-                <div>
-                  <label className="font-extrabold text-sm">Gender</label>
-                  <select
-                    className="mt-2 rounded-2xl border p-3 w-full"
-                    value={newborn.gender}
-                    onChange={(e) =>
-                      setNewborn((p) => ({ ...p, gender: e.target.value }))
-                    }
-                  >
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
               </div>
-
-              {/* Date of Birth Field (Formerly Note) */}
-              <div>
-                <label className="font-extrabold text-sm">Date of Birth</label>
-                <input
-                  type="date" // Changed to date type for better UX
-                  className="mt-2 rounded-2xl border p-3 w-full"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                />
-              </div>
-            </div>
-          )}
+            )}
 
             <button
               onClick={sendRequest}
@@ -423,11 +408,9 @@ export default function HouseholdView() {
             >
               Close
             </button>
-
             <div className="mb-4 text-white font-extrabold text-lg text-center">
               {previewTitle}
             </div>
-
             <img
               src={previewImage}
               alt={previewTitle}

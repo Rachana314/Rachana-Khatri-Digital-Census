@@ -1,6 +1,62 @@
 import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import Household from "../models/Household.js";
+import Request from "../models/Request.js";
+import Notification from "../models/Notification.js";
+
+// FIXED: Handles census change requests and creates the correct notification for the admin
+export const submitDeleteRequest = async (req, res) => {
+  try {
+    const { id } = req.params; // Can be MongoDB _id OR the 'HH-...' id
+    const { type, memberIndex, note, newborn } = req.body;
+
+    // 1. FIND the actual household first to get its real Database _id
+    const household = await Household.findOne({
+      $or: [
+        { _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null }, 
+        { householdId: id }
+      ]
+    });
+
+    if (!household) {
+      return res.status(404).json({ success: false, message: "Household not found" });
+    }
+
+    // 2. Create the Request document using the REAL database _id
+    const newRequest = new Request({
+      user: req.user._id,
+      householdId: household._id, 
+      type: type,
+      memberIndex: type === "delete_member" ? Number(memberIndex) : undefined,
+      newbornData: type === "add_newborn" ? newborn : undefined,
+      note: note,
+      status: "pending",
+    });
+
+    await newRequest.save();
+
+    // 3. Notify Admin - UPDATED: Added householdId and title to match your frontend
+    const adminUser = await User.findOne({ role: "admin" });
+    if (adminUser) {
+      await Notification.create({
+        user: adminUser._id,
+        householdId: household._id, // Required for the "Go to Household" button
+        type: "change_request",
+        title: "New Census Change Request",
+        msg: `User ${req.user.name} submitted a ${type.replace("_", " ")} request for Household #${household.householdId}.`,
+      });
+    }
+
+    res.status(201).json({ 
+      success: true, 
+      message: "Request sent to admin successfully!" 
+    });
+  } catch (error) {
+    console.error("Request Error:", error);
+    const msg = error.name === 'CastError' ? "Invalid ID format" : error.message;
+    res.status(500).json({ success: false, message: msg });
+  }
+};
 
 // get my profile + my household form summary
 export async function getMe(req, res) {
