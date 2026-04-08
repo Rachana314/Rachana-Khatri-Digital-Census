@@ -21,7 +21,7 @@ export default function Register() {
     setLoading(true);
 
     try {
-      const res = await apiFetch("/api/auth/user/register", {
+      await apiFetch("/api/auth/user/register", {
         method: "POST",
         body: JSON.stringify({
           name: form.name.trim(),
@@ -31,8 +31,7 @@ export default function Register() {
         }),
       });
 
-      alert(res.msg || "Registered! OTP sent to your email.");
-
+      // Alert removed to prevent the pop-up
       navigate("/verify-email", {
         replace: true,
         state: { email: form.email.trim().toLowerCase() },
@@ -45,9 +44,9 @@ export default function Register() {
   };
 
   return (
-    <div className="w-100 mx-auto mt-10 bg-white p-6 rounded-xl border border-gray-300 hover:scale-105 transition duration-700  ease-in-out shadow-sm">
-      <h2 className="text-2xl font-extrabold text-red-500 text-center mb-1">Register</h2>
-      <p className="text-black/60 font-medium text-center mb-5">Create your account.</p>
+    <div className="max-w-md mx-auto mt-10 bg-white p-6 rounded-3xl border shadow-sm">
+      <h2 className="text-2xl font-extrabold mb-1">Register</h2>
+      <p className="text-black/60 font-medium mb-5">Create your account.</p>
 
       {error && (
         <div className="mb-4 p-3 bg-rose-50 text-rose-700 rounded-2xl font-bold">
@@ -59,7 +58,7 @@ export default function Register() {
         <div>
           <label className="font-extrabold text-sm">Name</label>
           <input
-            className="mt-2 w-full border p-3 border-gray-300 rounded-2xl"
+            className="mt-2 w-full border p-3 rounded-2xl"
             placeholder="Your name"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -70,7 +69,7 @@ export default function Register() {
           <label className="font-extrabold text-sm">Email</label>
           <input
             type="email"
-            className="mt-2 w-full border-gray-300 border p-3 rounded-2xl"
+            className="mt-2 w-full border p-3 rounded-2xl"
             placeholder="example@gmail.com"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -80,7 +79,7 @@ export default function Register() {
         <div>
           <label className="font-extrabold text-sm">Phone</label>
           <input
-            className="mt-2 w-full border border-gray-300 p-3 rounded-2xl"
+            className="mt-2 w-full border p-3 rounded-2xl"
             placeholder="98XXXXXXXX"
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
@@ -91,7 +90,7 @@ export default function Register() {
           <label className="font-extrabold text-sm">Password</label>
           <input
             type="password"
-            className="mt-2 w-full border p-3 border-gray-300 rounded-2xl"
+            className="mt-2 w-full border p-3 rounded-2xl"
             placeholder="Min 8 characters"
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
@@ -100,7 +99,7 @@ export default function Register() {
 
         <button
           disabled={loading}
-          className="w-full bg-orange-500 hover:scale-105 transition duration-700 text-white p-3 rounded-2xl font-extrabold hover:bg-orange-600 disabled:opacity-50"
+          className="w-full bg-orange-500 text-white p-3 rounded-2xl font-extrabold hover:bg-orange-600 transition disabled:opacity-50"
         >
           {loading ? "Creating..." : "Register"}
         </button>

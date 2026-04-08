@@ -1,6 +1,9 @@
 import QRCode from "qrcode";
 import Household from "../models/Household.js";
 import Notification from "../models/Notification.js";
+import User from "../models/User.js";
+import fs from "fs";
+import crypto from "crypto";
 
 // LIST HOUSEHOLDS
 export async function listHouseholds(req, res) {
@@ -22,13 +25,14 @@ export async function listHouseholds(req, res) {
 // GET SINGLE HOUSEHOLD
 export async function getHousehold(req, res) {
   try {
+    const { householdId } = req.params;
     const item = await Household.findOne({
-      householdId: req.params.householdId,
+      householdId: householdId,
       user: req.user._id,
     });
 
     if (!item) {
-      return res.status(404).json({ message: "Not found" });
+      return res.status(404).json({ message: "Household Not Found" });
     }
 
     return res.json(item);
@@ -77,15 +81,12 @@ export async function createHousehold(req, res) {
           message: "Only one household form is allowed per user.",
         });
       }
-
       if (err.keyPattern?.householdId) {
         return res.status(400).json({
           message: "Try again. ID collision happened.",
         });
       }
     }
-
-    console.error("🔥 createHousehold:", err.message);
     return res.status(500).json({
       message: err.message || "Failed to create household",
     });
@@ -95,8 +96,9 @@ export async function createHousehold(req, res) {
 // UPDATE HOUSEHOLD
 export async function updateHousehold(req, res) {
   try {
+    const { householdId } = req.params;
     const item = await Household.findOne({
-      householdId: req.params.householdId,
+      householdId: householdId,
       user: req.user._id,
     });
 
@@ -111,7 +113,6 @@ export async function updateHousehold(req, res) {
     }
 
     const { ward, address, members, documents } = req.body;
-
     if (ward !== undefined) item.ward = ward;
     if (address !== undefined) item.address = address;
     if (members !== undefined) item.members = members;
@@ -120,18 +121,18 @@ export async function updateHousehold(req, res) {
     await item.save();
     return res.json(item);
   } catch (err) {
-    console.error("🔥 updateHousehold:", err.message);
     return res.status(500).json({
       message: err.message || "Failed to update household",
     });
   }
 }
 
-// SUBMIT HOUSEHOLD + GENERATE QR IMMEDIATELY
+// SUBMIT HOUSEHOLD + GENERATE QR
 export async function submitHousehold(req, res) {
   try {
+    const { householdId } = req.params;
     const item = await Household.findOne({
-      householdId: req.params.householdId,
+      householdId: householdId,
       user: req.user._id,
     });
 
@@ -148,8 +149,7 @@ export async function submitHousehold(req, res) {
     item.status = "submitted";
     item.rejectionReason = "";
 
-    const publicBaseUrl =
-      process.env.PUBLIC_FRONTEND_URL || "http://localhost:5173";
+    const publicBaseUrl = process.env.PUBLIC_FRONTEND_URL || "http://localhost:5173";
     const publicQrUrl = `${publicBaseUrl}/verify/${item.householdId}`;
 
     const qrImage = await QRCode.toDataURL(publicQrUrl);
@@ -170,7 +170,6 @@ export async function submitHousehold(req, res) {
       qrTargetUrl: publicQrUrl,
     });
   } catch (err) {
-    console.error("🔥 submitHousehold:", err.message);
     return res.status(500).json({
       message: err.message || "Failed to submit household",
     });
@@ -183,72 +182,63 @@ export async function uploadDocument(req, res) {
     const { householdId } = req.params;
     const { type } = req.body;
 
-    if (!type) {
+    if (!type) return res.status(400).json({ message: "Document type is required" });
+    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+
+    const fileBuffer = fs.readFileSync(req.file.path);
+    const imageHash = crypto.createHash("md5").update(fileBuffer).digest("hex");
+
+    const isDuplicate = await Household.findOne({ "documents.fileHash": imageHash });
+
+    if (isDuplicate) {
+      fs.unlinkSync(req.file.path);
       return res.status(400).json({
-        message: "Document type is required",
+        message: "This document photo has already been used in another household record.",
       });
     }
 
-    if (!req.file) {
-      return res.status(400).json({
-        message: "No file uploaded",
-      });
-    }
+    const item = await Household.findOne({ householdId, user: req.user._id });
 
-    const item = await Household.findOne({
-      householdId,
-      user: req.user._id,
-    });
-
-    if (!item) {
-      return res.status(404).json({
-        message: "Household not found",
-      });
-    }
-
+    if (!item) return res.status(404).json({ message: "Household not found" });
     if (item.locked || item.status === "verified") {
-      return res.status(400).json({
-        message: "Cannot upload documents after verification.",
-      });
+      return res.status(400).json({ message: "Cannot upload documents after verification." });
     }
 
-    const url = `http://localhost:8000/uploads/${req.file.filename}`;
+    // Fixed: use env variable instead of hardcoded localhost
+    const baseUrl = process.env.SERVER_BASE_URL || "http://localhost:8000";
+    const url = `${baseUrl}/uploads/${req.file.filename}`;
 
     item.documents.push({
       type,
       url,
       originalName: req.file.originalname,
+      fileHash: imageHash,
     });
 
     await item.save();
-
-    return res.json({
-      message: "Uploaded",
-      item,
-    });
+    return res.json({ message: "Uploaded successfully", item });
   } catch (err) {
-    console.error("🔥 uploadDocument:", err.message);
-    return res.status(500).json({
-      message: err.message || "Failed to upload document",
-    });
+    return res.status(500).json({ message: err.message || "Failed to upload document" });
   }
 }
 
-// to make the request to admin about adding the new born and delete the died one details
+// REQUEST HOUSEHOLD CHANGE
 export async function requestHouseholdChange(req, res) {
   try {
     const { householdId } = req.params;
-    const { type, memberId, note } = req.body;
+    const { type, note } = req.body;
 
     const item = await Household.findOne({ householdId, user: req.user._id });
     if (!item) return res.status(404).json({ message: "Household not found" });
 
-    // Create a notification for the ADMIN
+    const adminUser = await User.findOne({ role: "admin" });
+
     await Notification.create({
-      user: item.user, // or your admin ID
+      user: adminUser ? adminUser._id : item.user,
+      householdId: item._id,
       type: "change_request",
-      title: `Change Request: ${type}`,
-      msg: `Household ${householdId} requested a ${type}. Note: ${note}`,
+      title: `Change Request: ${type.replace("_", " ")}`,
+      msg: `Household ${item.householdId} requested a ${type}. Note: ${note || "No note provided"}`,
     });
 
     return res.json({ message: "Request sent to admin successfully" });
@@ -264,21 +254,14 @@ export async function deleteHousehold(req, res) {
       householdId: req.params.householdId,
       user: req.user._id,
     });
-    
 
-    if (!item) {
-      return res.status(404).json({ message: "Not found" });
-    }
+    if (!item) return res.status(404).json({ message: "Not found" });
 
     if (item.locked || item.status === "verified") {
-      return res.status(400).json({
-        message: "Verified household cannot be deleted.",
-      });
+      return res.status(400).json({ message: "Verified household cannot be deleted." });
     }
 
     await Household.deleteOne({ _id: item._id });
-
-    
 
     await Notification.create({
       user: req.user._id,
@@ -289,8 +272,6 @@ export async function deleteHousehold(req, res) {
 
     return res.json({ message: "Deleted" });
   } catch (err) {
-    return res.status(500).json({
-      message: err.message || "Failed to delete household",
-    });
+    return res.status(500).json({ message: err.message || "Failed to delete household" });
   }
 }

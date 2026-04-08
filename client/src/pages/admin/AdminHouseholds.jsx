@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { apiFetch } from "../../lib/api"; 
 import { Link } from "react-router-dom";
 
 const tabs = ["submitted", "verified", "rejected", "draft"];
+const BASE_URL = "http://localhost:8000"; // Your Backend URL
 
-// Sub-component for Status styling
 function StatusBadge({ status }) {
   const map = {
     draft: "bg-amber-50 text-amber-700 ring-amber-200",
@@ -20,7 +19,6 @@ function StatusBadge({ status }) {
   );
 }
 
-// Modal for Rejection reasons
 function RejectModal({ open, onClose, onSubmit, busy }) {
   const [reason, setReason] = useState("");
   useEffect(() => { if (open) setReason(""); }, [open]);
@@ -30,7 +28,7 @@ function RejectModal({ open, onClose, onSubmit, busy }) {
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4 backdrop-blur-sm">
       <div className="w-full max-w-lg rounded-3xl bg-white border shadow-xl p-6">
         <div className="text-xl font-extrabold text-zinc-900">Reject Submission</div>
-        <div className="text-zinc-50 text-sm font-semibold mt-1">Provide a reason for the citizen to correct.</div>
+        <div className="text-zinc-500 text-sm font-semibold mt-1">Provide a reason for the citizen to correct.</div>
         <textarea
           className="mt-4 w-full rounded-2xl border p-3 min-h-[130px] outline-none focus:ring-2 focus:ring-rose-500/20 transition"
           placeholder="e.g., Citizenship document is blurry..."
@@ -58,12 +56,19 @@ export default function AdminHouseholds() {
   const [refreshing, setRefreshing] = useState(false);
   const [err, setErr] = useState("");
   const [rejectOpen, setRejectOpen] = useState(false);
-  const [rejectTarget, setRejectTarget] = useState(""); // This stores the _id
+  const [rejectTarget, setRejectTarget] = useState(""); 
   const [busyAction, setBusyAction] = useState(false);
+
+  // Helper to handle tokens (assuming you store them in localStorage)
+  const getHeaders = () => ({
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${localStorage.getItem("token")}`
+  });
 
   const loadProgress = async () => {
     try {
-      const data = await apiFetch("/api/admin/progress");
+      const res = await fetch(`${BASE_URL}/api/admin/progress`, { headers: getHeaders() });
+      const data = await res.json();
       setProgress(data);
     } catch (e) { console.error(e); }
   };
@@ -76,7 +81,9 @@ export default function AdminHouseholds() {
       if (q) params.append("search", q); 
       if (ward) params.append("ward", ward);
       if (status) params.append("status", status);
-      const data = await apiFetch(`/api/admin/households?${params.toString()}`);
+      
+      const res = await fetch(`${BASE_URL}/api/admin/households?${params.toString()}`, { headers: getHeaders() });
+      const data = await res.json();
       setRows(Array.isArray(data) ? data : []);
     } catch (e) {
       setErr(e.message || "Failed to load households");
@@ -95,7 +102,11 @@ export default function AdminHouseholds() {
     if(!window.confirm("Verify this household?")) return;
     setBusyAction(true);
     try {
-      await apiFetch(`/api/admin/households/${id}/verify`, { method: "PATCH" });
+      const res = await fetch(`${BASE_URL}/api/admin/households/${id}/verify`, { 
+        method: "PATCH",
+        headers: getHeaders()
+      });
+      if (!res.ok) throw new Error("Verification failed");
       await Promise.all([loadProgress(), loadHouseholds({ isRefresh: true })]);
     } catch (e) { setErr(e.message); } finally { setBusyAction(false); }
   };
@@ -105,10 +116,12 @@ export default function AdminHouseholds() {
   const reject = async (reason) => {
     setBusyAction(true);
     try {
-      await apiFetch(`/api/admin/households/${rejectTarget}/reject`, {
+      const res = await fetch(`${BASE_URL}/api/admin/households/${rejectTarget}/reject`, {
         method: "PATCH",
+        headers: getHeaders(),
         body: JSON.stringify({ reason }),
       });
+      if (!res.ok) throw new Error("Rejection failed");
       setRejectOpen(false);
       await Promise.all([loadProgress(), loadHouseholds({ isRefresh: true })]);
     } catch (e) { setErr(e.message); } finally { setBusyAction(false); }
@@ -120,7 +133,8 @@ export default function AdminHouseholds() {
   }, [rows]);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto p-4">
+      {err && <div className="bg-rose-100 text-rose-700 p-4 rounded-2xl font-bold">{err}</div>}
       <div className="rounded-3xl bg-white border p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-black text-zinc-900">Census Management</h1>
@@ -172,7 +186,6 @@ export default function AdminHouseholds() {
                   <p className="text-zinc-500 font-bold text-sm">Ward {r.ward} • {r.address}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  {/* FIX: Link now uses r._id to avoid the "undefined" error */}
                   <Link 
                     to={`/admin/households/${r._id}`} 
                     className="px-5 py-2.5 rounded-xl bg-zinc-900 text-white font-black text-sm"

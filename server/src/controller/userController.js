@@ -151,26 +151,32 @@ export async function changePassword(req, res) {
   }
 }
 
-// upload profile photo
+/// upload profile photo
 export async function uploadAvatar(req, res) {
   try {
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
     }
 
-    const user = await User.findById(req.user._id);
-    if (!user) {
+    // Use findByIdAndUpdate to bypass specific field requirements (like 'phone')
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      { 
+        profileImageUrl: `http://localhost:8000/uploads/${req.file.filename}` 
+      },
+      { 
+        new: true,            // Returns the updated document
+        runValidators: false  // Fixes the "phone is required" error
+      }
+    ).select("-password");
+
+    if (!updatedUser) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    user.profileImageUrl = `http://localhost:8000/uploads/${req.file.filename}`;
-    await user.save();
-
-    const safeUser = await User.findById(req.user._id).select("-password");
-
     return res.json({
       message: "Profile photo updated successfully",
-      user: safeUser,
+      user: updatedUser,
     });
   } catch (e) {
     console.error("uploadAvatar error:", e);

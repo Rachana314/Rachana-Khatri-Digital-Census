@@ -66,7 +66,7 @@ export default function AdminReports() {
   };
 
   return (
-    <div className="rounded-3xl bg-white border shadow-sm p-6">
+    <div className="rounded-3xl bg-white border hover:scale-102 transition duration-700 border-gray-300 shadow-sm p-6">
       <h1 className="text-2xl font-extrabold">Reports</h1>
 
       <p className="text-black/60 font-semibold mt-2">
@@ -74,7 +74,7 @@ export default function AdminReports() {
       </p>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl border p-5">
+        <div className="rounded-2xl border p-5 border-gray-300 hover:border-gray-400 transition duration-700 bg-white shadow-sm">
           <h2 className="text-lg font-extrabold">PDF Report</h2>
           <p className="text-sm text-black/60 mt-2">
             Download a printable summary report for office and official review.
@@ -89,7 +89,7 @@ export default function AdminReports() {
           </button>
         </div>
 
-        <div className="rounded-2xl border p-5">
+        <div className="rounded-xl  border p-5 border-gray-300 hover:border-gray-400 transition duration-700 bg-white shadow-sm">
           <h2 className="text-lg font-extrabold">Excel / CSV Report</h2>
           <p className="text-sm text-black/60 mt-2">
             Download tabular household and population data for analysis.
@@ -98,7 +98,7 @@ export default function AdminReports() {
           <button
             onClick={() => handleExport("excel")}
             disabled={loadingType === "pdf" || loadingType === "excel"}
-            className="mt-4 rounded-2xl px-5 py-3 font-extrabold bg-emerald-600 text-white hover:opacity-90 transition disabled:opacity-60"
+            className="mt-4 rounded-2xl px-5 relative top-5 py-3 font-extrabold bg-emerald-600 text-white hover:opacity-90 transition disabled:opacity-60"
           >
             {loadingType === "excel" ? "Exporting Excel..." : "Export Excel"}
           </button>

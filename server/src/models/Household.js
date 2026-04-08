@@ -14,6 +14,8 @@ const MemberSchema = new mongoose.Schema(
     occupation: { type: String, default: "" },
     disability: { type: Boolean, default: false },
     disabilityDetail: { type: String, default: "" },
+    // --- ADDED THIS ---
+    photo: { type: String, default: "" }, 
   },
   { _id: false }
 );
@@ -22,14 +24,23 @@ const DocumentSchema = new mongoose.Schema(
   {
     type: {
       type: String,
-      enum: ["Citizenship", "Birth Certificate", "License", "Photo"],
+      // --- ADDED "MemberPhoto" TO ENUM ---
+      enum: ["Citizenship", "Birth Certificate", "License", "Photo", "MemberPhoto"],
       required: true,
     },
     url: { type: String, required: true },
     originalName: { type: String, default: "" },
+    fileHash: { 
+      type: String, 
+      required: true, 
+      index: true,
+      sparse: true 
+    }, 
   },
   { _id: false }
 );
+
+// ... (Rest of HouseholdSchema and Pre-validate stay the same)
 
 const HouseholdSchema = new mongoose.Schema(
   {

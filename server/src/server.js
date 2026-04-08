@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import path from "path";
 import dotenv from "dotenv";
+import { fileURLToPath } from "url";
 
 import connectDB from "./config/db.js";
 import config from "./config/config.js";
@@ -15,9 +16,11 @@ import publicRoutes from "./routes/publicRoutes.js";
 
 dotenv.config();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 
-// Middleware
 app.use(
   cors({
     origin: [
@@ -33,7 +36,8 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+// Fixed: go up from src/ to server/, then into uploads/
+app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/households", householdRoutes);
@@ -62,6 +66,7 @@ const startServer = async () => {
     await connectDB();
     app.listen(config.port, "0.0.0.0", () => {
       console.log(`🚀 Server running on port ${config.port}`);
+      console.log(`📁 Uploads served from: ${path.join(__dirname, "..", "uploads")}`);
     });
   } catch (error) {
     console.error("Failed to start server:", error.message);

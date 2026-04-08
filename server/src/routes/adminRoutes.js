@@ -10,7 +10,7 @@ import {
   adminProgress,
   adminAnalytics,
   getAdminNotifications,
-  updateRequestStatus // Added this to handle Approve/Reject actions
+  updateRequestStatus 
 } from "../controller/adminController.js";
 
 const router = express.Router();
@@ -18,22 +18,36 @@ const router = express.Router();
 // This protects ALL routes below with both Auth and Admin checks
 router.use(authMiddleware, adminMiddleware);
 
-// --- Household Management ---
+/**
+ * --- Household Management ---
+ * These routes are explicitly mapped to fix the 404 errors in your console
+ */
+
+// Gets the list for the main table
 router.get("/households", adminListHouseholds);
+
+// Fixes the 404 for the "Review Details" page
+// This captures the MongoDB ID from the URL
 router.get("/households/:id", adminGetHouseholdById);
+
+// Fixes the 404 for the "Verify" and "Reject" buttons
+// Matches the PATCH calls seen in your browser console logs
 router.patch("/households/:id/verify", adminVerifyHousehold);
 router.patch("/households/:id/reject", adminRejectHousehold);
 router.patch("/households/:id/correction", adminRequestCorrection);
 
-// --- Dashboard & Stats ---
+/**
+ * --- Dashboard & Stats ---
+ */
 router.get("/progress", adminProgress);
 router.get("/analytics", adminAnalytics);
 
-// --- User Change Requests (Notifications) ---
+/**
+ * --- Notifications & Change Requests ---
+ */
 router.get("/notifications", getAdminNotifications);
 
-// NEW: Route to actually Approve/Reject the change request
-// This matches the logic needed when you click the buttons in the Admin UI
+// Handles Approve/Reject for specific citizen change requests
 router.patch("/requests/:id/status", updateRequestStatus);
 
 export default router;
