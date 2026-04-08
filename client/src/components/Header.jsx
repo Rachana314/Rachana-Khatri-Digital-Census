@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import logo from "../assets/logo.png";
 
+// const desktopItem =
+//   "px-4 py-2 rounded-[5px] text-sm font-extrabold text-white hover:scale-105 transition duration-500 hover:bg-white/15 ";
+
 const desktopItem =
-  "px-4 py-3 rounded-2xl text-sm font-extrabold text-white hover:text-[var(--color-brandOrange)] hover:bg-white/15 transition";
+  "relative inline-block px-4 py-2 text-sm font-extrabold text-white rounded-[5px] hover:scale-105 transition duration-500 hover:bg-white/15 before:content-[''] before:block before:absolute before:bottom-1.5 before:left-0 before:h-[3px] before:w-full before:bg-white before:scale-x-0 before:origin-center before:transition-transform before:duration-300 hover:before:scale-x-100";
 
 const mobileItem =
   "w-full text-left px-4 py-3 rounded-2xl text-base font-extrabold text-[var(--color-brandBlack)] hover:text-[var(--color-brandOrange)] hover:bg-black/5 transition";
@@ -30,7 +33,7 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 bg-[var(--color-brandRed)] border-b border-white/30">
-      <div className="max-w-6xl mx-auto px-4 h-[92px] flex items-center justify-between">
+      <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         <Link to="/#home" className="flex items-center gap-3">
           <div className="h-14 w-14 rounded-2xl bg-white/15 flex items-center justify-center">
             <img src={logo} alt="Logo" className="h-12 w-auto object-contain" />
@@ -42,7 +45,7 @@ export default function Header() {
           </div>
         </Link>
 
-        <nav className="hidden lg:flex items-center gap-2">
+        <nav className="hidden lg:flex items-center gap-3">
           {links.map((l) => (
             <NavLink
               key={l.to}
@@ -60,7 +63,7 @@ export default function Header() {
           {/* ✅ ENTER button -> go to /register */}
           <Link
             to="/register"
-            className="hidden sm:inline-flex px-6 py-3 rounded-2xl font-extrabold bg-white text-[var(--color-brandBlack)] hover:bg-[var(--color-brandOrange)] hover:text-white transition"
+            className="hidden sm:inline-flex px-6 py-2 hover:scale-110 transition duration-700 rounded-xl font-bold bg-white hover:bg-blue-500 hover:text-white"
           >
             Enter
           </Link>
@@ -74,19 +77,16 @@ export default function Header() {
           >
             <div className="relative w-6 h-6">
               <span
-                className={`absolute left-0 top-1 h-[3px] w-6 bg-white transition ${
-                  open ? "translate-y-2 rotate-45" : ""
-                }`}
+                className={`absolute left-0 top-1 h-[3px] w-6 bg-white transition ${open ? "translate-y-2 rotate-45" : ""
+                  }`}
               />
               <span
-                className={`absolute left-0 top-3 h-[3px] w-6 bg-white transition ${
-                  open ? "opacity-0" : ""
-                }`}
+                className={`absolute left-0 top-3 h-[3px] w-6 bg-white transition ${open ? "opacity-0" : ""
+                  }`}
               />
               <span
-                className={`absolute left-0 top-5 h-[3px] w-6 bg-white transition ${
-                  open ? "-translate-y-2 -rotate-45" : ""
-                }`}
+                className={`absolute left-0 top-5 h-[3px] w-6 bg-white transition ${open ? "-translate-y-2 -rotate-45" : ""
+                  }`}
               />
             </div>
           </button>
