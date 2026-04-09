@@ -28,14 +28,10 @@ router.get("/households", adminListHouseholds);
 
 // Fixes the 404 for the "Review Details" page
 // This captures the MongoDB ID from the URL
-router.get("/households/:id", adminGetHouseholdById);
-
-// Fixes the 404 for the "Verify" and "Reject" buttons
-// Matches the PATCH calls seen in your browser console logs
-router.patch("/households/:id/verify", adminVerifyHousehold);
-router.patch("/households/:id/reject", adminRejectHousehold);
-router.patch("/households/:id/correction", adminRequestCorrection);
-
+router.get("/households/:householdId", adminGetHouseholdById);
+router.patch("/households/:householdId/verify", adminVerifyHousehold);
+router.patch("/households/:householdId/reject", adminRejectHousehold);
+router.patch("/households/:householdId/correction", adminRequestCorrection);
 /**
  * --- Dashboard & Stats ---
  */

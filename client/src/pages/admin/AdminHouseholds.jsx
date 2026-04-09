@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 const tabs = ["submitted", "verified", "rejected", "draft"];
-const BASE_URL = "http://localhost:8000"; // Your Backend URL
+const BASE_URL = "http://localhost:8000";
 
 function StatusBadge({ status }) {
   const map = {
@@ -10,6 +10,7 @@ function StatusBadge({ status }) {
     submitted: "bg-sky-50 text-sky-700 ring-sky-200",
     rejected: "bg-rose-50 text-rose-700 ring-rose-200",
     verified: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+    correction_required: "bg-orange-50 text-orange-700 ring-orange-200",
   };
   return (
     <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-extrabold ring-1 ${map[status] || "bg-zinc-50 text-zinc-700 ring-zinc-200"}`}>
@@ -56,13 +57,12 @@ export default function AdminHouseholds() {
   const [refreshing, setRefreshing] = useState(false);
   const [err, setErr] = useState("");
   const [rejectOpen, setRejectOpen] = useState(false);
-  const [rejectTarget, setRejectTarget] = useState(""); 
+  const [rejectTarget, setRejectTarget] = useState("");
   const [busyAction, setBusyAction] = useState(false);
 
-  // Helper to handle tokens (assuming you store them in localStorage)
   const getHeaders = () => ({
     "Content-Type": "application/json",
-    "Authorization": `Bearer ${localStorage.getItem("token")}`
+    "Authorization": `Bearer ${localStorage.getItem("token")}`,
   });
 
   const loadProgress = async () => {
@@ -78,10 +78,10 @@ export default function AdminHouseholds() {
     try {
       setErr("");
       const params = new URLSearchParams();
-      if (q) params.append("search", q); 
+      if (q) params.append("search", q);
       if (ward) params.append("ward", ward);
       if (status) params.append("status", status);
-      
+
       const res = await fetch(`${BASE_URL}/api/admin/households?${params.toString()}`, { headers: getHeaders() });
       const data = await res.json();
       setRows(Array.isArray(data) ? data : []);
@@ -98,20 +98,26 @@ export default function AdminHouseholds() {
     loadHouseholds();
   }, [status]);
 
-  const verify = async (id) => {
-    if(!window.confirm("Verify this household?")) return;
+  // ✅ FIXED: using householdId instead of _id
+  const verify = async (householdId) => {
+    if (!window.confirm("Verify this household?")) return;
     setBusyAction(true);
     try {
-      const res = await fetch(`${BASE_URL}/api/admin/households/${id}/verify`, { 
+      const res = await fetch(`${BASE_URL}/api/admin/households/${householdId}/verify`, {
         method: "PATCH",
-        headers: getHeaders()
+        headers: getHeaders(),
       });
       if (!res.ok) throw new Error("Verification failed");
       await Promise.all([loadProgress(), loadHouseholds({ isRefresh: true })]);
-    } catch (e) { setErr(e.message); } finally { setBusyAction(false); }
+    } catch (e) { setErr(e.message); } 
+    finally { setBusyAction(false); }
   };
 
-  const openReject = (id) => { setRejectTarget(id); setRejectOpen(true); };
+  // ✅ FIXED: using householdId instead of _id
+  const openReject = (householdId) => { 
+    setRejectTarget(householdId); 
+    setRejectOpen(true); 
+  };
 
   const reject = async (reason) => {
     setBusyAction(true);
@@ -124,7 +130,8 @@ export default function AdminHouseholds() {
       if (!res.ok) throw new Error("Rejection failed");
       setRejectOpen(false);
       await Promise.all([loadProgress(), loadHouseholds({ isRefresh: true })]);
-    } catch (e) { setErr(e.message); } finally { setBusyAction(false); }
+    } catch (e) { setErr(e.message); } 
+    finally { setBusyAction(false); }
   };
 
   const wardOptions = useMemo(() => {
@@ -135,6 +142,7 @@ export default function AdminHouseholds() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto p-4">
       {err && <div className="bg-rose-100 text-rose-700 p-4 rounded-2xl font-bold">{err}</div>}
+
       <div className="rounded-3xl bg-white border p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-black text-zinc-900">Census Management</h1>
@@ -154,19 +162,27 @@ export default function AdminHouseholds() {
 
       <div className="flex flex-wrap items-center gap-3 bg-white p-3 rounded-3xl border shadow-sm">
         {tabs.map((tab) => (
-          <button key={tab} onClick={() => setStatus(tab)} className={`px-5 py-2 rounded-2xl font-black transition-all ${status === tab ? "bg-zinc-900 text-white shadow-lg" : "hover:bg-zinc-100 text-zinc-500"}`}>
+          <button key={tab} onClick={() => setStatus(tab)}
+            className={`px-5 py-2 rounded-2xl font-black transition-all ${status === tab ? "bg-zinc-900 text-white shadow-lg" : "hover:bg-zinc-100 text-zinc-500"}`}>
             {tab.toUpperCase()}
           </button>
         ))}
       </div>
 
       <div className="bg-white border rounded-3xl shadow-sm p-4 flex flex-wrap gap-3">
-        <input className="flex-1 min-w-[300px] border-zinc-200 rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-zinc-900/5 transition border" placeholder="Search ID, address, or names..." value={q} onChange={(e) => setQ(e.target.value)} />
+        <input
+          className="flex-1 min-w-[300px] border-zinc-200 rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-zinc-900/5 transition border"
+          placeholder="Search ID, address, or names..."
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
         <select className="border border-zinc-200 rounded-2xl px-4 py-3 outline-none" value={ward} onChange={(e) => setWard(e.target.value)}>
           <option value="">All Wards</option>
-          {wardOptions.map(w => <option key={w} value={w}>Ward {w}</option>)}
+          {wardOptions.map((w) => <option key={w} value={w}>Ward {w}</option>)}
         </select>
-        <button onClick={() => loadHouseholds()} className="bg-zinc-900 text-white px-8 py-3 rounded-2xl font-black hover:bg-zinc-800 transition">Search</button>
+        <button onClick={() => loadHouseholds()} className="bg-zinc-900 text-white px-8 py-3 rounded-2xl font-black hover:bg-zinc-800 transition">
+          Search
+        </button>
       </div>
 
       <div className="bg-white border rounded-3xl shadow-sm overflow-hidden">
@@ -184,19 +200,28 @@ export default function AdminHouseholds() {
                     <StatusBadge status={r.status} />
                   </div>
                   <p className="text-zinc-500 font-bold text-sm">Ward {r.ward} • {r.address}</p>
+                  <p className="text-zinc-400 text-xs font-bold">
+                    Submitted by: {r.user?.name || "Unknown"} • {r.user?.email || ""}
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Link 
-                    to={`/admin/households/${r._id}`} 
+                  {/* ✅ FIXED: r.householdId instead of r._id */}
+                  <Link
+                    to={`/admin/households/${r.householdId}`}
                     className="px-5 py-2.5 rounded-xl bg-zinc-900 text-white font-black text-sm"
                   >
                     Review Details
                   </Link>
-                  
+
                   {r.status === "submitted" && (
                     <>
-                      <button onClick={() => verify(r._id)} className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition font-bold">Verify</button>
-                      <button onClick={() => openReject(r._id)} className="p-2.5 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 transition font-bold">Reject</button>
+                      {/* ✅ FIXED: r.householdId instead of r._id */}
+                      <button onClick={() => verify(r.householdId)} disabled={busyAction} className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition font-bold disabled:opacity-50">
+                        Verify
+                      </button>
+                      <button onClick={() => openReject(r.householdId)} disabled={busyAction} className="p-2.5 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 transition font-bold disabled:opacity-50">
+                        Reject
+                      </button>
                     </>
                   )}
                 </div>
@@ -205,6 +230,7 @@ export default function AdminHouseholds() {
           </div>
         )}
       </div>
+
       <RejectModal open={rejectOpen} onClose={() => setRejectOpen(false)} onSubmit={reject} busy={busyAction} />
     </div>
   );
