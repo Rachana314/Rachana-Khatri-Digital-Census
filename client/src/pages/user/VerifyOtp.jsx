@@ -126,7 +126,7 @@ export default function VerifyOtp() {
         disabled={resending || !email.trim()}
         className="mt-4 w-full border p-3 rounded-2xl font-extrabold hover:bg-black/5 transition disabled:opacity-50"
       >
-        {resending ? "Sending..." : "Resend OTP"}
+        {resending ? "Sending..." : "Send OTP"}
       </button>
 
       <div className="mt-4 text-sm font-semibold text-black/60">

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import QRCode from "react-qr-code";
 import { apiFetch } from "../../lib/api";
+import { FiEye, FiEyeOff } from "react-icons/fi";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 const PUBLIC_BASE =
@@ -265,9 +266,7 @@ export default function Settings() {
               }}
             />
 
-            <div className="text-sm text-black/60 font-medium">
-              Choose a clear image, preview it, then click upload.
-            </div>
+           
 
             {selectedFile && (
               <div className="text-sm font-semibold text-black/70">
@@ -367,10 +366,7 @@ export default function Settings() {
 
       <div className="rounded-3xl bg-white border shadow-sm p-6 space-y-4">
         <div className="font-extrabold text-lg">Verification & QR</div>
-        <p className="text-sm text-black/60">
-          Your household QR code is generated immediately after form submission.
-          When scanned, it shows the real current status of your form.
-        </p>
+        
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="rounded-2xl border p-4 bg-zinc-50">

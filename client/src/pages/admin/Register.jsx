@@ -240,7 +240,7 @@ export default function AdminRegister() {
               disabled={loadingResend}
               className="w-full rounded-2xl bg-blue-600 text-white py-3 font-bold disabled:opacity-60"
             >
-              {loadingResend ? "Please wait..." : "Resend OTP"}
+              {loadingResend ? "Please wait..." : "send OTP"}
             </button>
           </div>
         )}

@@ -74,9 +74,7 @@ export default function Profile() {
       <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-3xl font-extrabold">My Profile</h1>
-          <p className="text-black/60 font-medium mt-1">
-            Your details and household form status.
-          </p>
+          
         </div>
 
         <Link
