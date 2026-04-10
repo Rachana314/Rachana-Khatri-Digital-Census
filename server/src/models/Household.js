@@ -91,4 +91,24 @@ HouseholdSchema.pre("validate", function () {
   }
 });
 
+// server/models/Household.js
+const householdSchema = new mongoose.Schema({
+  // ... your existing fields ...
+  address: { type: String },
+  memberCount: { type: Number, default: 0 },
+  status: { type: String, enum: ['verified', 'pending', 'unverified'], default: 'pending' },
+
+  // ADD THIS:
+  // Add these two fields inside your existing Household schema
+lat: { type: Number, default: null },
+lng: { type: Number, default: null },
+  location: {
+    type: { type: String, default: 'Point' },
+    coordinates: { type: [Number], default: [0, 0] } // [lng, lat]
+  }
+});
+
+// ADD THIS (for geo queries later):
+householdSchema.index({ location: '2dsphere' });
+
 export default mongoose.model("Household", HouseholdSchema);

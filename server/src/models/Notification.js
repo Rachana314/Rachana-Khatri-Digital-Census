@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const NotificationSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    // Add "change_request" to the enum list below
+    // Add "change_request" to the enum list belo
     type: { 
       type: String, 
       enum: ["form", "admin", "change_request"], 

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { FiEye, FiEyeOff } from "react-icons/fi";
 import { apiFetch } from "../../lib/api";
 
 export default function Register() {
@@ -11,6 +12,8 @@ export default function Register() {
     phone: "",
     password: "",
   });
+
+  const [showPw, setShowPw] = useState(false);
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -31,7 +34,6 @@ export default function Register() {
         }),
       });
 
-      // Alert removed to prevent the pop-up
       navigate("/verify-email", {
         replace: true,
         state: { email: form.email.trim().toLowerCase() },
@@ -88,13 +90,18 @@ export default function Register() {
 
         <div>
           <label className="font-extrabold text-sm">Password</label>
-          <input
-            type="password"
-            className="mt-2 w-full border p-3 rounded-2xl"
-            placeholder="Min 8 characters"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-          />
+          <div className="mt-2 flex items-center gap-2 border p-3 rounded-2xl">
+            <input
+              type={showPw ? "text" : "password"}
+              className="w-full outline-none bg-transparent"
+              placeholder="Min 8 characters"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+            />
+            <button type="button" onClick={() => setShowPw((v) => !v)}>
+              {showPw ? <FiEyeOff /> : <FiEye />}
+            </button>
+          </div>
         </div>
 
         <button

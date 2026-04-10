@@ -29,6 +29,7 @@ import AdminHouseholdView from "./pages/admin/HouseholdView";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminNotifications from "./pages/admin/AdminNotifications";
+import HouseholdMapDashboard from "./pages/admin/HouseholdMapDashboard";
 
 // User
 import UserLayout from "./components/layout/UserLayout";
@@ -65,6 +66,7 @@ export default function App() {
           <Route path="/admin/register" element={<AdminRegister />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/enter" element={<Navigate to="/register" replace />} />
+          
         </Route>
 
         <Route
@@ -85,6 +87,7 @@ export default function App() {
           <Route path="analytics" element={<AdminAnalytics />} />
           <Route path="reports" element={<AdminReports />} />
           <Route path="notifications" element={<AdminNotifications />} />
+           <Route path="map" element={<HouseholdMapDashboard />} />
 
         </Route>
 

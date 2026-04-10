@@ -247,6 +247,37 @@ export async function requestHouseholdChange(req, res) {
   }
 }
 
+
+// server/controllers/householdController.js
+export const getHouseholdMapData = async (req, res) => {
+  try {
+    const households = await Household.find(
+      {
+        status: "verified",
+        lat: { $exists: true, $ne: null },
+        lng: { $exists: true, $ne: null },
+      },
+      "_id householdId address ward members status lat lng"
+    );
+
+    const mapData = households.map((h) => ({
+      id: h._id,
+      householdId: h.householdId,
+      address: h.address,
+      ward: h.ward,
+      memberCount: h.members?.length || 0,
+      status: h.status,
+      lat: h.lat,
+      lng: h.lng,
+    }));
+
+    res.json({ success: true, data: mapData });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+
 // DELETE HOUSEHOLD
 export async function deleteHousehold(req, res) {
   try {

@@ -14,8 +14,11 @@ const config = {
   jwtSecret: process.env.JWT_SECRET || "",
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
 
-  smtpEmail: process.env.SMTP_EMAIL || "",
-  smtpPassword: process.env.SMTP_PASSWORD || "",
+  // smtpEmail: process.env.SMTP_EMAIL || "",
+  // smtpPassword: process.env.SMTP_PASSWORD || "",
+
+  sendGridApiKey: process.env.SEND_GRID || "",
+  emailFrom: process.env.EMAIL_FROM || "",
 
   otpExpiryMinutes: Number(process.env.OTP_EXPIRY_MINUTES) || 10,
 

@@ -1,28 +1,33 @@
-import nodemailer from "nodemailer";
+import sgMail from "@sendgrid/mail";
 import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import config from "../config/config.js";
 
-// Gmail transporter
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: config.smtpEmail,
-    pass: config.smtpPassword,
-  },
-});
+// Initialize SendGrid
+sgMail.setApiKey(config.sendGridApiKey);
 
 function makeOtp() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
 async function sendOtpEmail(to, otp, subject = "Digital Census OTP") {
-  await transporter.sendMail({
-    from: config.smtpEmail,
+  const msg = {
     to,
+    from: config.emailFrom, // must be verified in SendGrid dashboard
     subject,
     text: `Your OTP is: ${otp}\nThis OTP expires in ${config.otpExpiryMinutes} minutes.`,
-  });
+  };
+
+  try {
+    const [response] = await sgMail.send(msg);
+    console.log("✅ OTP email sent, status:", response.statusCode);
+  } catch (error) {
+    console.error(
+      "❌ SendGrid error:",
+      JSON.stringify(error.response?.body?.errors, null, 2)
+    );
+    throw error;
+  }
 }
 
 // REQUEST EMAIL VERIFICATION OTP
@@ -53,7 +58,7 @@ export async function generateEmailOtp(email) {
     await sendOtpEmail(user.email, otp, "Digital Census Email Verification OTP");
     return { message: "OTP sent to email" };
   } catch (e) {
-    console.log("⚠️ Email send failed. DEV OTP:", otp);
+    console.warn("⚠️ Email send failed. DEV OTP:", otp);
     return { message: "Email failed, using devOtp", devOtp: otp };
   }
 }
@@ -129,7 +134,7 @@ export async function forgotPassword(email) {
     await sendOtpEmail(user.email, otp, "Digital Census Password Reset OTP");
     return { message: "Password reset OTP sent to email" };
   } catch (e) {
-    console.log("⚠️ Password reset email failed. DEV OTP:", otp);
+    console.warn("⚠️ Password reset email failed. DEV OTP:", otp);
     return { message: "Email failed, using devOtp", devOtp: otp };
   }
 }
@@ -186,7 +191,6 @@ export async function resetPassword(email, otp, newPassword, confirmPassword) {
   user.password = hashedPassword;
   user.resetPasswordCode = null;
   user.resetPasswordCodeExpiryTime = null;
-
   await user.save();
 
   return { message: "Password reset successful" };

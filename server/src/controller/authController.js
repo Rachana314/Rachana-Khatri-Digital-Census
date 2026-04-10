@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import config from "../config/config.js";
+import { sendWelcomeEmail } from "../utils/sendEmailOtp.js";
 import {
   generateEmailOtp as generateEmailOtpService,
   verifyEmailOtp as verifyEmailOtpService,
@@ -72,6 +73,9 @@ export async function register(req, res, next) {
       roles:
         Array.isArray(roles) && roles.length > 0 ? roles : undefined,
     });
+
+    // Send welcome email (fire-and-forget — won't block registration if it fails)
+    sendWelcomeEmail(user.email, user.name);
 
     return res.status(201).json({
       message: "Registration successful. Please verify your email with OTP.",

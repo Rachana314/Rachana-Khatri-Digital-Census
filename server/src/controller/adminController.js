@@ -140,6 +140,36 @@ export async function adminVerifyHousehold(req, res) {
   }
 }
 
+export async function verifyHousehold(req, res) {
+  try {
+    const { householdId } = req.params;
+    const { lat, lng } = req.body;
+
+    const item = await Household.findOne({ householdId });
+    if (!item) return res.status(404).json({ message: "Household not found" });
+
+    item.status = "verified";
+    item.locked = true;
+    item.rejectionReason = "";
+    if (lat !== undefined) item.lat = parseFloat(lat);
+    if (lng !== undefined) item.lng = parseFloat(lng);
+
+    await item.save();
+
+    await Notification.create({
+      user: item.user,
+      type: "form",
+      title: "Household Verified",
+      msg: `Your household ${item.householdId} has been verified.`,
+    });
+
+    return res.json({ message: "Household verified successfully", item });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+}
+
+
 // ADMIN: REJECT HOUSEHOLD ✅ FIXED - using req.params.householdId
 export async function adminRejectHousehold(req, res) {
   try {
