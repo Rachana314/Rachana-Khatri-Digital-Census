@@ -69,7 +69,6 @@ function withCacheBust(url) {
   return `${url}${sep}t=${Date.now()}`;
 }
 
-// ── Bell nav item with badge ─────────────────────────────────────────────────
 function BellNavLink({ className, onClick, unreadCount }) {
   return (
     <NavLink to="/user/notifications" className={className} onClick={onClick}>
@@ -93,12 +92,13 @@ export default function UserLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Text color is dark since background is very light
   const baseLink =
-    "flex items-center gap-3 px-4 py-3 rounded-xl text-white text-lg font-extrabold transition hover:text-blue-700 hover:bg-white/80";
-  const activeLink = "bg-white text-zinc-900 shadow-sm";
+    "flex items-center gap-3 px-4 py-3 rounded-xl text-orange-900 text-lg font-extrabold transition hover:bg-orange-200";
+  const activeLink = "bg-white text-orange-700 shadow-sm";
   const linkClass = ({ isActive }) => `${baseLink} ${isActive ? activeLink : ""}`;
 
-  // ── Load user from localStorage ──────────────────────────────────────────
+  // Load user from localStorage and re-sync when profile is updated
   useEffect(() => {
     const loadUser = () => {
       try {
@@ -121,38 +121,36 @@ export default function UserLayout() {
     };
   }, []);
 
-  // ── Fetch unread count ───────────────────────────────────────────────────
   const fetchUnreadCount = useCallback(async () => {
     try {
       const res = await apiFetch("/api/notifications/count");
       setUnreadCount(res?.unread ?? 0);
     } catch {
-      // silently fail — badge just stays at 0
+      // silently fail — badge stays at 0
     }
   }, []);
 
-  // Poll every 60s + re-fetch whenever user navigates away from /notifications
+  // Poll every 60s to keep the bell badge count fresh
   useEffect(() => {
     fetchUnreadCount();
     const interval = setInterval(fetchUnreadCount, 60_000);
     return () => clearInterval(interval);
   }, [fetchUnreadCount]);
 
-  // When leaving the notifications page, refresh the count
+  // Refresh count when user navigates away from notifications page
   useEffect(() => {
     if (!location.pathname.includes("/notifications")) {
       fetchUnreadCount();
     }
   }, [location.pathname, fetchUnreadCount]);
 
-  // Expose a global event so Notifications.jsx can push count updates instantly
+  // Listen for instant count updates pushed from Notifications.jsx
   useEffect(() => {
     const handler = (e) => setUnreadCount(e.detail ?? 0);
     window.addEventListener("notification-count-updated", handler);
     return () => window.removeEventListener("notification-count-updated", handler);
   }, []);
 
-  // ── Logout ───────────────────────────────────────────────────────────────
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -161,43 +159,34 @@ export default function UserLayout() {
     navigate("/login", { replace: true });
   };
 
-  // ── Avatar block (shared between desktop + mobile) ───────────────────────
   const Avatar = () => (
-    <div className="mt-4 flex items-center gap-3 rounded-2xl bg-white/10 p-3">
-      <div className="h-12 w-12 rounded-full overflow-hidden border border-white/30 bg-white/20 flex-shrink-0">
+    <div className="mt-4 flex items-center gap-3 rounded-2xl bg-orange-200/50 p-3">
+      <div className="h-12 w-12 rounded-full overflow-hidden border border-orange-300 bg-orange-100 flex-shrink-0">
         {me?.profileImageUrl ? (
           <img src={me.profileImageUrl} alt={me?.name || "User"} className="h-full w-full object-cover" />
         ) : (
-          <div className="h-full w-full flex items-center justify-center font-extrabold text-white">
+          // Show first letter of name if no profile image
+          <div className="h-full w-full flex items-center justify-center font-extrabold text-orange-700">
             {String(me?.name || "U").charAt(0).toUpperCase()}
           </div>
         )}
       </div>
       <div className="min-w-0">
-        <div className="font-extrabold truncate">{me?.name || "User"}</div>
-        <div className="text-xs text-white/80 truncate">{me?.email || ""}</div>
+        <div className="font-extrabold truncate text-orange-900">{me?.name || "User"}</div>
+        <div className="text-xs text-orange-700 truncate">{me?.email || ""}</div>
       </div>
     </div>
   );
 
-  // ── Nav links (shared between desktop + mobile) ──────────────────────────
   const NavLinks = ({ onNav }) => (
     <>
       <NavLink to="/user/dashboard" className={linkClass} onClick={onNav}>
         <DashboardIcon /> Dashboard
       </NavLink>
-
       <NavLink to="/user/forms" className={linkClass} onClick={onNav}>
         <FormIcon /> Forms
       </NavLink>
-
-      {/* Bell with badge */}
-      <BellNavLink
-        className={linkClass}
-        onClick={onNav}
-        unreadCount={unreadCount}
-      />
-
+      <BellNavLink className={linkClass} onClick={onNav} unreadCount={unreadCount} />
       <NavLink to="/user/profile" className={linkClass} onClick={onNav}>
         <UserIcon /> Profile
       </NavLink>
@@ -207,57 +196,52 @@ export default function UserLayout() {
   return (
     <div className="min-h-screen bg-gray-50 flex">
 
-      {/* ── Desktop sidebar ────────────────────────────────────────────────── */}
-        <aside className="hidden md:flex w-72 bg-orange-500 text-white flex-col sticky top-0 h-screen overflow-y-auto">
-        <div className="p-5 border-b border-white/30">
-          <h2 className="text-2xl font-extrabold">Digital Census</h2>
-          <p className="text-sm text-white/80 font-semibold">User Panel</p>
+      {/* Desktop sidebar — very light orange background */}
+      <aside className="hidden md:flex w-72 bg-orange-100 flex-col sticky top-0 h-screen overflow-y-auto border-r border-orange-200">
+        <div className="p-5 border-b border-orange-200">
+          <h2 className="text-2xl font-extrabold text-orange-900">Digital Census</h2>
+          <p className="text-sm text-orange-700 font-semibold">User Panel</p>
           <Avatar />
         </div>
-
         <nav className="p-4 space-y-2 flex-1">
           <NavLinks />
         </nav>
-
-        <div className="p-4 border-t border-white/30 space-y-2">
+        <div className="p-4 border-t border-orange-200 space-y-2">
           <NavLink to="/user/settings" className={linkClass}>
             <SettingsIcon /> Settings
           </NavLink>
           <button
             onClick={logout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white text-lg font-extrabold transition hover:bg-white/15 text-left"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-orange-900 text-lg font-extrabold transition hover:bg-orange-200 text-left"
           >
             <LogoutIcon /> Logout
           </button>
         </div>
       </aside>
 
-      {/* ── Mobile drawer ──────────────────────────────────────────────────── */}
+      {/* Mobile drawer — same very light orange */}
       {open && (
         <div className="fixed inset-0 z-40 md:hidden">
           <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
-
-          <div className="absolute left-0 top-0 h-full w-72 bg-orange-500 text-white flex flex-col shadow-xl">
-            <div className="p-5 border-b border-white/30 flex justify-between items-start">
+          <div className="absolute left-0 top-0 h-full w-72 bg-orange-100 flex flex-col shadow-xl border-r border-orange-200">
+            <div className="p-5 border-b border-orange-200 flex justify-between items-start">
               <div className="w-full">
-                <h2 className="text-2xl font-extrabold">Digital Census</h2>
-                <p className="text-sm text-white/80 font-semibold">User Panel</p>
+                <h2 className="text-2xl font-extrabold text-orange-900">Digital Census</h2>
+                <p className="text-sm text-orange-700 font-semibold">User Panel</p>
                 <Avatar />
               </div>
-              <button onClick={() => setOpen(false)} className="font-bold ml-3 mt-1">✕</button>
+              <button onClick={() => setOpen(false)} className="font-bold ml-3 mt-1 text-orange-900">✕</button>
             </div>
-
             <nav className="p-4 space-y-2 flex-1">
               <NavLinks onNav={() => setOpen(false)} />
             </nav>
-
-            <div className="p-4 border-t border-white/30 space-y-2">
+            <div className="p-4 border-t border-orange-200 space-y-2">
               <NavLink to="/user/settings" className={linkClass} onClick={() => setOpen(false)}>
                 <SettingsIcon /> Settings
               </NavLink>
               <button
                 onClick={() => { setOpen(false); logout(); }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white text-lg font-extrabold transition hover:bg-white/15 text-left"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-orange-900 text-lg font-extrabold transition hover:bg-orange-200 text-left"
               >
                 <LogoutIcon /> Logout
               </button>
@@ -266,10 +250,9 @@ export default function UserLayout() {
         </div>
       )}
 
-      {/* ── Main content ───────────────────────────────────────────────────── */}
+      {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         <header className="bg-white border-b px-4 sm:px-6 py-3 flex justify-between items-center">
-          {/* Mobile bell badge in topbar */}
           <div className="md:hidden relative inline-flex">
             <NavLink to="/user/notifications" className="text-orange-500">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6">
@@ -283,7 +266,6 @@ export default function UserLayout() {
               )}
             </NavLink>
           </div>
-
           <button onClick={() => setOpen(true)} className="md:hidden font-extrabold text-xl ml-auto">
             ☰
           </button>
