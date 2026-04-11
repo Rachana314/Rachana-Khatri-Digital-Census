@@ -1,6 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 
 export default function QrCode() {
+  // Get the householdId from the URL 
   const { householdId } = useParams();
 
   return (
@@ -20,6 +21,7 @@ export default function QrCode() {
       <div className="rounded-3xl bg-white border shadow-sm p-6">
         <div className="font-extrabold">Household ID: <span className="text-black/70">{householdId}</span></div>
 
+        {/*  QR image will be rendered  */}
         <div className="mt-5 rounded-2xl border bg-gray-50 p-10 flex items-center justify-center">
           <div className="text-black/50 font-extrabold">
             QR IMAGE WILL SHOW HERE
