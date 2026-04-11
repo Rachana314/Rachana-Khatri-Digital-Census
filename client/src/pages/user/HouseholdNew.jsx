@@ -8,7 +8,6 @@ export default function HouseholdNew() {
   const [searchParams] = useSearchParams();
   const editId = searchParams.get("edit");
 
-  // Removed "Photo" as a separate step
   const steps = useMemo(() => ["Household", "Members", "Review"], []);
   const [step, setStep] = useState(0);
 
@@ -18,7 +17,7 @@ export default function HouseholdNew() {
   const [household, setHousehold] = useState({ ward: "", address: "" });
   const [members, setMembers] = useState([]);
 
-  // Added photoFile to the member draft state
+  
   const [memberDraft, setMemberDraft] = useState({
     name: "",
     age: "",
@@ -120,7 +119,6 @@ export default function HouseholdNew() {
       let uploadedPhotoUrl = "";
       if (memberDraft.photoFile) {
         const res = await uploadDoc(currentId, "MemberPhoto", memberDraft.photoFile);
-        // Assuming your backend returns the newly added document in the list
         uploadedPhotoUrl = res?.item?.documents?.at(-1)?.url || "";
       }
 
@@ -183,7 +181,7 @@ export default function HouseholdNew() {
     validateStep(1);
     const id = householdId || (await saveDraft());
 
-    // ✅ Get GPS location before submitting
+    // Get GPS location before submitting
     const getLocation = () =>
       new Promise((resolve) => {
         if (!navigator.geolocation) return resolve({});
@@ -195,7 +193,7 @@ export default function HouseholdNew() {
 
     const location = await getLocation();
 
-    // ✅ Save lat/lng to household before submitting
+    // Save lat/lng to household before submitting
     if (location.lat && location.lng) {
       await apiFetch(`/api/households/${id}`, {
         method: "PUT",
