@@ -7,6 +7,7 @@ export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Send OTP to email then it redirect to reset-password page
   const submit = async (e) => {
     e.preventDefault();
 
@@ -21,12 +22,13 @@ export default function ForgotPassword() {
       const data = await apiFetch("/api/auth/user/forgot-password", {
         method: "POST",
         body: JSON.stringify({
-          email: email.trim().toLowerCase(),
+          email: email.trim().toLowerCase(), 
         }),
       });
 
       alert(data.message || "OTP sent to email");
 
+      // Pass email 
       navigate("/reset-password", {
         state: { email: email.trim().toLowerCase() },
       });
@@ -54,6 +56,7 @@ export default function ForgotPassword() {
             className="rounded-2xl border px-4 py-3"
           />
 
+          {/* Button is disabled when ots waiting for the API response */}
           <button
             disabled={loading}
             className="rounded-2xl bg-red-600 text-white py-3 font-bold disabled:opacity-60"
