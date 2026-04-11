@@ -33,6 +33,7 @@ export default function Profile() {
       const data = await apiFetch("/api/users/me");
       setUser(data.user);
       setHousehold(data.household || null);
+      
       localStorage.setItem("me", JSON.stringify(data.user));
     } catch (e) {
       setErr(e.message);
@@ -55,7 +56,7 @@ export default function Profile() {
 
   if (err) {
     return (
-      <div className="p-6 bg-rose-50 text-rose-700 font-bold rounded-2xl">
+      <div className="p6 bg-rose-50 text-rose-700 font-bold rounded-2xl">
         {err}
       </div>
     );
@@ -74,7 +75,6 @@ export default function Profile() {
       <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-3xl font-extrabold">My Profile</h1>
-          
         </div>
 
         <Link
@@ -88,6 +88,7 @@ export default function Profile() {
       <div className="rounded-3xl bg-white border shadow-sm p-6">
         <div className="flex items-center gap-4 flex-wrap">
           <div className="h-24 w-24 rounded-full border overflow-hidden bg-zinc-100">
+            {/* Show profile image if available*/}
             {user.profileImageUrl ? (
               <img
                 src={user.profileImageUrl}
@@ -145,6 +146,7 @@ export default function Profile() {
               Updated: {new Date(household.updatedAt).toLocaleString()}
             </div>
 
+            {/* Show rejection reason if admin rejected the form */}
             {household.status === "rejected" && (
               <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
                 <div className="font-extrabold text-rose-700">Rejected reason</div>
@@ -162,6 +164,7 @@ export default function Profile() {
                 View
               </Link>
 
+              {/* hidden edit button*/}
               {household.status !== "verified" && (
                 <Link
                   to={`/user/household/new?edit=${household.householdId}`}
