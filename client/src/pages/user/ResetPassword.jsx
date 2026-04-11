@@ -6,7 +6,8 @@ import { apiFetch } from "../../lib/api";
 export default function ResetPassword() {
   const navigate = useNavigate();
   const location = useLocation();
-
+  
+  // refill email if redirected from forgot-password page
   const [email, setEmail] = useState(location.state?.email || "");
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -37,6 +38,8 @@ export default function ResetPassword() {
       });
 
       alert(data.message || "Password reset successful");
+
+      // After reset, redirect to login 
       navigate("/login", {
         state: { email: email.trim().toLowerCase() },
       });
@@ -72,6 +75,7 @@ export default function ResetPassword() {
             className="rounded-2xl border px-4 py-3"
           />
 
+          {/* Password fields with show/hide toggle */}
           <div className="flex items-center gap-2 rounded-2xl border px-4 py-3">
             <input
               type={showNewPw ? "text" : "password"}
@@ -98,6 +102,7 @@ export default function ResetPassword() {
             </button>
           </div>
 
+        
           <button
             disabled={loading}
             className="rounded-2xl bg-red-600 text-white py-3 font-bold disabled:opacity-60"
