@@ -162,7 +162,7 @@ export async function uploadAvatar(req, res) {
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
       { 
-        profileImageUrl: `http://localhost:8000/uploads/${req.file.filename}` 
+        profileImageUrl: `${process.env.SERVER_BASE_URL || "http://localhost:8000"}/uploads/${req.file.filename}`
       },
       { 
         new: true,            // Returns the updated document
