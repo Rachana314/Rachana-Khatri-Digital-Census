@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 
-// ── Icons ────────────────────────────────────────────────────────────────────
+// Icons 
 const BellIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
@@ -29,7 +29,7 @@ const CircleDotIcon = () => (
   </svg>
 );
 
-// ── Type badge ────────────────────────────────────────────────────────────────
+//  Type badge 
 const TYPE_STYLE = {
   form:           { label: "FORM",           bg: "bg-blue-100",   text: "text-blue-700"   },
   admin:          { label: "ADMIN",          bg: "bg-amber-100",  text: "text-amber-700"  },
@@ -45,11 +45,11 @@ function TypeBadge({ type }) {
   );
 }
 
-// ── Sidebar sync helper ───────────────────────────────────────────────────────
+//  Sidebar sync helper 
 const pushCountToSidebar = (unread) =>
   window.dispatchEvent(new CustomEvent("notification-count-updated", { detail: unread }));
 
-// ── Main component ────────────────────────────────────────────────────────────
+//  Main component 
 export default function Notifications() {
   const { t } = useTranslation();
   const [filter, setFilter]   = useState("all");
@@ -59,7 +59,6 @@ export default function Notifications() {
   const [error, setError]     = useState("");
   const [busy, setBusy]       = useState({});
 
-  // ── Fetch ─────────────────────────────────────────────────────────────────
   const fetchAll = useCallback(async () => {
     try {
       setLoading(true);
@@ -71,7 +70,7 @@ export default function Notifications() {
       setData(Array.isArray(list) ? list : []);
       const safeCnt = cnt || { total: 0, unread: 0, read: 0 };
       setCounts(safeCnt);
-      pushCountToSidebar(safeCnt.unread);         // ← sync sidebar on load
+      pushCountToSidebar(safeCnt.unread);        
     } catch (e) {
       setError(e.message || "Failed to load notifications");
     } finally {
@@ -81,10 +80,9 @@ export default function Notifications() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  
   const setBusyFor = (id, val) => setBusy((b) => ({ ...b, [id]: val }));
 
-  // ── Toggle read / unread ──────────────────────────────────────────────────
   const toggleRead = async (n) => {
     const endpoint = n.read
       ? `/api/notifications/${n._id}/unread`
@@ -99,7 +97,7 @@ export default function Notifications() {
           unread: n.read ? c.unread + 1 : c.unread - 1,
           read:   n.read ? c.read   - 1 : c.read   + 1,
         };
-        pushCountToSidebar(next.unread);          // ← sync sidebar
+        pushCountToSidebar(next.unread);          
         return next;
       });
     } catch (e) {
@@ -109,7 +107,7 @@ export default function Notifications() {
     }
   };
 
-  // ── Delete one ────────────────────────────────────────────────────────────
+  
   const deleteOne = async (id) => {
     setBusyFor(id, true);
     try {
@@ -119,13 +117,13 @@ export default function Notifications() {
         if (removed && !removed.read) {
           setCounts((c) => {
             const next = { total: c.total - 1, unread: c.unread - 1, read: c.read };
-            pushCountToSidebar(next.unread);      // ← sync sidebar
+            pushCountToSidebar(next.unread);     
             return next;
           });
         } else {
           setCounts((c) => {
             const next = { total: c.total - 1, unread: c.unread, read: c.read - 1 };
-            pushCountToSidebar(next.unread);      // ← sync sidebar
+            pushCountToSidebar(next.unread);      
             return next;
           });
         }
@@ -138,14 +136,14 @@ export default function Notifications() {
     }
   };
 
-  // ── Mark all read ─────────────────────────────────────────────────────────
+  // Mark all read 
   const markAllRead = async () => {
     try {
       await apiFetch("/api/notifications/read-all", { method: "PATCH" });
       setData((prev) => prev.map((x) => ({ ...x, read: true })));
       setCounts((c) => {
         const next = { total: c.total, unread: 0, read: c.total };
-        pushCountToSidebar(0);                    // ← sync sidebar
+        pushCountToSidebar(0);                   
         return next;
       });
     } catch (e) {
@@ -153,14 +151,14 @@ export default function Notifications() {
     }
   };
 
-  // ── Delete all read ───────────────────────────────────────────────────────
+  // Delete all read ─
   const deleteAllRead = async () => {
     try {
       await apiFetch("/api/notifications/read", { method: "DELETE" });
       setData((prev) => prev.filter((x) => !x.read));
       setCounts((c) => {
         const next = { total: c.unread, unread: c.unread, read: 0 };
-        pushCountToSidebar(next.unread);          // ← sync sidebar
+        pushCountToSidebar(next.unread);          
         return next;
       });
     } catch (e) {
@@ -168,7 +166,7 @@ export default function Notifications() {
     }
   };
 
-  // ── Derived list ──────────────────────────────────────────────────────────
+  // Derived list 
   const mapped = useMemo(() =>
     data.map((n) => ({
       ...n,
@@ -186,19 +184,17 @@ export default function Notifications() {
     return mapped.filter((n) => n.type === filter);
   }, [mapped, filter]);
 
-  // ── Filter tabs ───────────────────────────────────────────────────────────
+  // Filter tabs 
   const filters = [
     { key: "all",            label: t("notifications.filterAll",    { defaultValue: "All" }),     count: counts.total  },
     { key: "unread",         label: t("notifications.filterUnread", { defaultValue: "Unread" }),  count: counts.unread },
     { key: "form",           label: t("notifications.filterForm",   { defaultValue: "Form" })                          },
-    { key: "admin",          label: t("notifications.filterAdmin",  { defaultValue: "Admin" })                         },
     { key: "change_request", label: t("notifications.filterChange", { defaultValue: "Changes" })                       },
   ];
 
   const hasUnread    = counts.unread > 0;
   const hasReadItems = data.some((n) => n.read);
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="max-w-5xl mx-auto space-y-6">
 
@@ -306,7 +302,7 @@ export default function Notifications() {
               >
                 <div className="flex items-start justify-between gap-4">
 
-                  {/* Left: dot + content */}
+                  
                   <div className="flex items-start gap-3 min-w-0">
                     <div className="mt-1.5 flex-shrink-0">
                       {!n.read

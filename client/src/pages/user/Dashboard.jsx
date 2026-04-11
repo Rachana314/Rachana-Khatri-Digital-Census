@@ -2,7 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-// ── Icons ──────────────────────────────────────────────────────────────────────
+// Icons 
 function UserIcon({ className = "h-6 w-6" }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
@@ -18,7 +18,7 @@ function UserIcon({ className = "h-6 w-6" }) {
   );
 }
 
-// ── Status badge colors ────────────────────────────────────────────────────────
+// Status badge colors 
 const badgeStyles = {
   draft: "bg-amber-50 text-amber-700 ring-amber-200",
   submitted: "bg-sky-50 text-sky-700 ring-sky-200",
@@ -26,7 +26,7 @@ const badgeStyles = {
   verified: "bg-emerald-50 text-emerald-700 ring-emerald-200",
 };
 
-// ── Small reusable components ──────────────────────────────────────────────────
+// Small reusable components 
 function StatusBadge({ status = "n/a" }) {
   return (
     <span
@@ -80,7 +80,7 @@ function GhostBtn({ to, children }) {
   );
 }
 
-// ── Main Dashboard Component ───────────────────────────────────────────────────
+//  Main Dashboard Component 
 export default function Dashboard() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -93,20 +93,19 @@ export default function Dashboard() {
     profileImageUrl: "",
   });
 
-  // Household data fetched from API (null = still loading)
+  
   const [household, setHousehold] = useState(null);
 
-  // Notifications list
   const [notifications, setNotifications] = useState([]);
 
-  // ── Load user from localStorage ──────────────────────────────────────────────
+  
   useEffect(() => {
     const loadUser = () => {
       try {
         const token = localStorage.getItem("token");
         const saved = localStorage.getItem("me") || localStorage.getItem("user");
 
-        // If no token or user data, redirect to login
+        
         if (!token || !saved) {
           navigate("/login");
           return;
@@ -135,7 +134,7 @@ export default function Dashboard() {
     return () => window.removeEventListener("user-updated", loadUser);
   }, [navigate]);
 
-  // ── Fetch this user's household from the API ──────────────────────────────────
+  
   useEffect(() => {
     const fetchHousehold = async () => {
       try {
@@ -146,7 +145,7 @@ export default function Dashboard() {
         const data = await res.json();
 
         if (Array.isArray(data) && data.length > 0) {
-          // User has a household — use the first one
+         
           const h = data[0];
           setHousehold({
             exists: true,
@@ -168,31 +167,31 @@ export default function Dashboard() {
     fetchHousehold();
   }, []);
 
-  // ── Derived state ─────────────────────────────────────────────────────────────
+  
   // Can the user still edit their household?
   const canEdit = household?.status === "draft" || household?.status === "rejected";
 
-  // Where does the main CTA button go?
+  
   const ctaTo = !household?.exists
     ? "/user/household/new"
     : canEdit
     ? "/user/household/new"
     : "/user/forms";
 
-  // Current language (en or np)
+  // Current language 
   const currentLang = i18n.language?.startsWith("np") ? "np" : "en";
 
-  // ── Render ────────────────────────────────────────────────────────────────────
+  // Render
   return (
     <div className="min-h-[calc(100vh-80px)] bg-gradient-to-b from-orange-50/60 via-white to-white">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-10 space-y-6">
 
-        {/* ── Profile header ── */}
+        {/* Profile header*/}
         <div className="rounded-3xl border border-black/5 bg-white p-5 sm:p-6 shadow-sm">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
 
-              {/* Profile image or fallback icon */}
+              {/* Profile image */}
               <div className="h-14 w-14 rounded-2xl overflow-hidden border bg-orange-100 text-orange-700 grid place-items-center">
                 {user.profileImageUrl ? (
                   <img
@@ -267,7 +266,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* ── Household form card + notifications ── */}
+       
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
           {/* Household form summary */}
@@ -276,7 +275,7 @@ export default function Dashboard() {
             right={<StatusBadge status={household?.status || "draft"} />}
             className="lg:col-span-2"
           >
-            {/* Show loading state while fetching */}
+            {/* Show the loading state while fetching  data*/}
             {!household ? (
               <div className="text-sm text-zinc-400 font-semibold">Loading...</div>
             ) : (
@@ -296,7 +295,7 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* Show rejection reason if form was rejected */}
+                {/* Show the rejection reason if form was rejected */}
                 {household.status === "rejected" && (
                   <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4">
                     <div className="font-extrabold text-rose-700">{t("dashboard.correctionNeeded")}</div>
@@ -347,7 +346,7 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* ── Quick actions ── */}
+        {/*Quick actions */}
         <div className="rounded-3xl border border-black/5 bg-white p-6 shadow-sm">
           <h2 className="text-base sm:text-lg font-extrabold tracking-tight">{t("dashboard.quickActions")}</h2>
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
