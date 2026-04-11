@@ -92,13 +92,12 @@ export default function UserLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Text color is dark since background is very light
+  
   const baseLink =
     "flex items-center gap-3 px-4 py-3 rounded-xl text-orange-900 text-lg font-extrabold transition hover:bg-orange-200";
   const activeLink = "bg-white text-orange-700 shadow-sm";
   const linkClass = ({ isActive }) => `${baseLink} ${isActive ? activeLink : ""}`;
 
-  // Load user from localStorage and re-sync when profile is updated
   useEffect(() => {
     const loadUser = () => {
       try {
@@ -126,25 +125,24 @@ export default function UserLayout() {
       const res = await apiFetch("/api/notifications/count");
       setUnreadCount(res?.unread ?? 0);
     } catch {
-      // silently fail — badge stays at 0
+     
     }
   }, []);
 
-  // Poll every 60s to keep the bell badge count fresh
+  
   useEffect(() => {
     fetchUnreadCount();
     const interval = setInterval(fetchUnreadCount, 60_000);
     return () => clearInterval(interval);
   }, [fetchUnreadCount]);
 
-  // Refresh count when user navigates away from notifications page
   useEffect(() => {
     if (!location.pathname.includes("/notifications")) {
       fetchUnreadCount();
     }
   }, [location.pathname, fetchUnreadCount]);
 
-  // Listen for instant count updates pushed from Notifications.jsx
+ 
   useEffect(() => {
     const handler = (e) => setUnreadCount(e.detail ?? 0);
     window.addEventListener("notification-count-updated", handler);
@@ -165,7 +163,6 @@ export default function UserLayout() {
         {me?.profileImageUrl ? (
           <img src={me.profileImageUrl} alt={me?.name || "User"} className="h-full w-full object-cover" />
         ) : (
-          // Show first letter of name if no profile image
           <div className="h-full w-full flex items-center justify-center font-extrabold text-orange-700">
             {String(me?.name || "U").charAt(0).toUpperCase()}
           </div>
@@ -196,7 +193,7 @@ export default function UserLayout() {
   return (
     <div className="min-h-screen bg-gray-50 flex">
 
-      {/* Desktop sidebar — very light orange background */}
+      {/* Desktop sidebar */}
       <aside className="hidden md:flex w-72 bg-orange-100 flex-col sticky top-0 h-screen overflow-y-auto border-r border-orange-200">
         <div className="p-5 border-b border-orange-200">
           <h2 className="text-2xl font-extrabold text-orange-900">Digital Census</h2>
@@ -219,7 +216,7 @@ export default function UserLayout() {
         </div>
       </aside>
 
-      {/* Mobile drawer — same very light orange */}
+      {/* Mobile drawer */}
       {open && (
         <div className="fixed inset-0 z-40 md:hidden">
           <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
