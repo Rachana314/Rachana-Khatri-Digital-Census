@@ -176,20 +176,48 @@ export default function HouseholdNew() {
   const back = () => setStep((x) => Math.max(x - 1, 0));
 
   const submit = async () => {
-    if (!canEdit || saving) return;
-    setSaving(true);
-    try {
-      validateStep(0);
-      validateStep(1);
-      const id = householdId || (await saveDraft());
-      await apiFetch(`/api/households/${id}/submit`, { method: "POST" });
-      navigate("/user/forms");
-    } catch (e) {
-      setError(e.message || "Submit failed");
-    } finally {
-      setSaving(false);
+  if (!canEdit || saving) return;
+  setSaving(true);
+  try {
+    validateStep(0);
+    validateStep(1);
+    const id = householdId || (await saveDraft());
+
+    // ✅ Get GPS location before submitting
+    const getLocation = () =>
+      new Promise((resolve) => {
+        if (!navigator.geolocation) return resolve({});
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          () => resolve({}) // if user denies, just submit without location
+        );
+      });
+
+    const location = await getLocation();
+
+    // ✅ Save lat/lng to household before submitting
+    if (location.lat && location.lng) {
+      await apiFetch(`/api/households/${id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          ward: household.ward,
+          address: household.address,
+          members,
+          documents,
+          lat: location.lat,
+          lng: location.lng,
+        }),
+      });
     }
-  };
+
+    await apiFetch(`/api/households/${id}/submit`, { method: "POST" });
+    navigate("/user/forms");
+  } catch (e) {
+    setError(e.message || "Submit failed");
+  } finally {
+    setSaving(false);
+  }
+};
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">

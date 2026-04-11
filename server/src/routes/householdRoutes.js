@@ -16,7 +16,9 @@ import {
 
 const router = express.Router();
 
-router.get("/admin/map-data", adminMiddleWare, getHouseholdMapData);
+//router.get("/admin/map-data", adminMiddleWare, getHouseholdMapData);
+// ✅ This
+router.get("/admin/map-data", authMiddleware, adminMiddleWare, getHouseholdMapData);
 
 router.get("/", authMiddleware, listHouseholds);
 router.post("/", authMiddleware, createHousehold);

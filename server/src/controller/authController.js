@@ -65,14 +65,15 @@ export async function register(req, res, next) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await User.create({
-      name: name.trim(),
-      email: normalizedEmail,
-      phone: normalizedPhone,
-      password: hashedPassword,
-      roles:
-        Array.isArray(roles) && roles.length > 0 ? roles : undefined,
-    });
+    const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "digitalcensus4@gmail.com";
+
+const user = await User.create({
+  name: name.trim(),
+  email: normalizedEmail,
+  phone: normalizedPhone,
+  password: hashedPassword,
+  roles: normalizedEmail === ADMIN_EMAIL ? ["ADMIN"] : ["user"],
+});
 
     // Send welcome email (fire-and-forget — won't block registration if it fails)
     sendWelcomeEmail(user.email, user.name);
@@ -118,13 +119,21 @@ export async function login(req, res, next) {
       });
     }
 
-    const token = createToken(user);
+// ✅ Block anyone except admin email from admin login route
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "digitalcensus4@gmail.com";
+if (req.path.includes("admin") && normalizedEmail !== ADMIN_EMAIL) {
+  return res.status(403).json({
+    message: "Access denied. Admin only.",
+  });
+}
 
-    return res.status(200).json({
-      message: "Login successful",
-      token,
-      user: buildUserResponse(user),
-    });
+const token = createToken(user);
+
+return res.status(200).json({
+  message: "Login successful",
+  token,
+  user: buildUserResponse(user),
+});
   } catch (err) {
     next(err);
   }

@@ -85,12 +85,7 @@ export default function Login() {
           </button>
         </form>
 
-        <p className="mt-5 text-sm text-black/60">
-          New admin?{" "}
-          <Link to="/admin/register" className="font-extrabold text-sky-700 hover:underline">
-            Register
-          </Link>
-        </p>
+        
       </div>
     </div>
   );

@@ -112,11 +112,13 @@ export async function updateHousehold(req, res) {
       });
     }
 
-    const { ward, address, members, documents } = req.body;
+ const { ward, address, members, documents, lat, lng } = req.body;
     if (ward !== undefined) item.ward = ward;
     if (address !== undefined) item.address = address;
     if (members !== undefined) item.members = members;
     if (documents !== undefined) item.documents = documents;
+    if (lat !== undefined) item.lat = lat;  // ✅
+    if (lng !== undefined) item.lng = lng;  // ✅
 
     await item.save();
     return res.json(item);

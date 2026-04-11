@@ -4,18 +4,13 @@ const MemberSchema = new mongoose.Schema(
   {
     name: { type: String, default: "" },
     age: { type: Number, default: null },
-    gender: {
-      type: String,
-      enum: ["Male", "Female", "Other"],
-      default: "Male",
-    },
+    gender: { type: String, enum: ["Male", "Female", "Other"], default: "Male" },
     maritalStatus: { type: String, default: "Single" },
     education: { type: String, default: "" },
     occupation: { type: String, default: "" },
     disability: { type: Boolean, default: false },
     disabilityDetail: { type: String, default: "" },
-    // --- ADDED THIS ---
-    photo: { type: String, default: "" }, 
+    photo: { type: String, default: "" },
   },
   { _id: false }
 );
@@ -24,62 +19,42 @@ const DocumentSchema = new mongoose.Schema(
   {
     type: {
       type: String,
-      // --- ADDED "MemberPhoto" TO ENUM ---
       enum: ["Citizenship", "Birth Certificate", "License", "Photo", "MemberPhoto"],
       required: true,
     },
     url: { type: String, required: true },
     originalName: { type: String, default: "" },
-    fileHash: { 
-      type: String, 
-      required: true, 
-      index: true,
-      sparse: true 
-    }, 
+    fileHash: { type: String, required: true, index: true, sparse: true },
   },
   { _id: false }
 );
 
-// ... (Rest of HouseholdSchema and Pre-validate stay the same)
-
 const HouseholdSchema = new mongoose.Schema(
   {
-    householdId: {
-      type: String,
-      unique: true,
-      index: true,
-    },
-
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-      unique: true,
-    },
-
+    householdId: { type: String, unique: true, index: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, unique: true },
     ward: { type: String, required: true },
     address: { type: String, required: true },
-
     members: { type: [MemberSchema], default: [] },
     documents: { type: [DocumentSchema], default: [] },
-
     status: {
       type: String,
       enum: ["draft", "submitted", "correction_required", "rejected", "verified"],
       default: "draft",
     },
-
     rejectionReason: { type: String, default: "" },
     locked: { type: Boolean, default: false },
-
-    verifiedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      default: null,
-    },
+    verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     verifiedAt: { type: Date, default: null },
-
     qrCodeData: { type: String, default: "" },
+
+    // ✅ lat/lng now in the correct schema
+    lat: { type: Number, default: null },
+    lng: { type: Number, default: null },
+    location: {
+      type: { type: String, default: "Point" },
+      coordinates: { type: [Number], default: [0, 0] },
+    },
   },
   { timestamps: true }
 );
@@ -91,24 +66,6 @@ HouseholdSchema.pre("validate", function () {
   }
 });
 
-// server/models/Household.js
-const householdSchema = new mongoose.Schema({
-  // ... your existing fields ...
-  address: { type: String },
-  memberCount: { type: Number, default: 0 },
-  status: { type: String, enum: ['verified', 'pending', 'unverified'], default: 'pending' },
-
-  // ADD THIS:
-  // Add these two fields inside your existing Household schema
-lat: { type: Number, default: null },
-lng: { type: Number, default: null },
-  location: {
-    type: { type: String, default: 'Point' },
-    coordinates: { type: [Number], default: [0, 0] } // [lng, lat]
-  }
-});
-
-// ADD THIS (for geo queries later):
-householdSchema.index({ location: '2dsphere' });
+HouseholdSchema.index({ location: "2dsphere" });
 
 export default mongoose.model("Household", HouseholdSchema);
