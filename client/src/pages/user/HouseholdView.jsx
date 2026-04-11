@@ -31,7 +31,6 @@ export default function HouseholdView() {
   const [reqType, setReqType] = useState("delete_member");
   const [memberIndex, setMemberIndex] = useState(0);
   const [note, setNote] = useState("");
-
   const [previewImage, setPreviewImage] = useState("");
   const [previewTitle, setPreviewTitle] = useState("");
 
@@ -48,7 +47,6 @@ export default function HouseholdView() {
 
   const canEdit = useMemo(() => item && item.status !== "verified", [item]);
   const canDelete = useMemo(() => item && item.status !== "verified", [item]);
-
   const load = async () => {
     try {
       setErr("");
@@ -69,7 +67,6 @@ export default function HouseholdView() {
   const handleDeleteHousehold = async () => {
     const ok = window.confirm("Do you really want to delete this household form?");
     if (!ok) return;
-
     try {
       setErr("");
       await apiFetch(`/api/households/${id}`, { method: "DELETE" });
@@ -296,7 +293,7 @@ export default function HouseholdView() {
           <div className="rounded-3xl bg-white border shadow-sm p-6 space-y-4">
             <div className="font-extrabold text-lg">Request changes (after verified)</div>
             <div className="text-black/60 font-medium">
-              After verification you cannot edit. You can request admin.
+              After verification you cannot edit. You need to request admin to do any changes.
             </div>
 
             <div className="flex flex-wrap gap-2">
