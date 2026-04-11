@@ -392,7 +392,7 @@ export default function Settings() {
               </div>
 
               <div className="text-sm text-black/60">
-                This QR code opens the public household status page and always
+                This QR code  always
                 shows the latest form status.
               </div>
 
@@ -420,7 +420,7 @@ export default function Settings() {
                   onClick={() => window.open(qrTargetUrl, "_blank")}
                   className="rounded-2xl px-5 py-3 font-extrabold border hover:bg-black/5 transition"
                 >
-                  Open Public Status Page
+                  Open Status Page
                 </button>
               </div>
             </div>
@@ -430,8 +430,8 @@ export default function Settings() {
                 QR code is not available yet.
               </div>
               <div className="text-sm text-black/60">
-                Submit your household form first. After submission, the QR code
-                should appear here automatically.
+                Submit your household form first. After submission QR code 
+                appear here automatically.
               </div>
             </div>
           ) : (
