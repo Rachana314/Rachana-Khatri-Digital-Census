@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../../lib/api";
 
-// Added correction_required tab so user can see correction-requested forms too
+// correction_required tab so user can see correction-requested forms too
 const tabs = ["draft", "submitted", "correction_required", "rejected", "verified"];
 
 function StatusBadge({ status }) {
@@ -56,10 +56,10 @@ export default function Forms() {
     [forms, active]
   );
 
-  // One user can only have one household form
+  
   const hasForm = forms.length > 0;
 
-  // Delete household until it becomes verified
+  // Delete household till its unverified
   const handleDelete = async (id) => {
     const ok = window.confirm("Do you want to delete this household form?");
     if (!ok) return;
@@ -195,7 +195,7 @@ export default function Forms() {
                         {t("common.view")}
                       </Link>
 
-                      {/* Allow editing if correction was requested too */}
+                      {/* editing if correction was requested too */}
                       {(f.status === "draft" ||
                         f.status === "rejected" ||
                         f.status === "submitted" ||
