@@ -6,7 +6,7 @@ import { apiFetch } from "../../lib/api";
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-
+  // Pre-fill email 
   const [email, setEmail] = useState(location.state?.email || "");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -31,11 +31,13 @@ export default function Login() {
         }),
       });
 
+      // Save token and user info so other pages can access them
       localStorage.setItem("token", data.token);
 
       if (data.user) {
         localStorage.setItem("user", JSON.stringify(data.user));
         localStorage.setItem("me", JSON.stringify(data.user));
+        // Notify the app that user data has changed 
         window.dispatchEvent(new Event("user-updated"));
       }
 
@@ -43,6 +45,7 @@ export default function Login() {
     } catch (err) {
       const message = err.message || "Login failed";
 
+      // If email is not verified, redirect to verify-email page 
       if (message.toLowerCase().includes("verify your email")) {
         navigate("/verify-email", {
           state: { email: email.trim().toLowerCase() },
@@ -78,6 +81,7 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
               className="w-95 relative right-4 border border-gray-300 px-4 py-3 rounded-xl"
             />
+            {/* Toggle password visibility */}
             <button className="relative right-15" type="button" onClick={() => setShowPw(!showPw)}>
               {showPw ? <FiEyeOff /> : <FiEye />}
             </button>
@@ -96,9 +100,8 @@ export default function Login() {
             {loading ? "Please wait..." : "Login"}
           </button>
         </form>
-
         <p className="mt-5 text-sm text-center">
-          Don’t have an account?{" "}
+          Don't have an account?{" "}
           <Link to="/register" className="font-bold text-red-600">
             Register
           </Link>
