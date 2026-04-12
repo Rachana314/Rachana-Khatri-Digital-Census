@@ -53,7 +53,7 @@ export default function Home() {
       { threshold: 0.08, rootMargin: "0px 0px -10% 0px" }
     );
 
-    // Remove visible and observe it animates)
+  
     els.forEach((el) => {
       el.classList.remove("is-visible");
       io.observe(el);
@@ -64,7 +64,6 @@ export default function Home() {
 
   return (
     <div className="w-full">
-      {/* HERO — Full Banner Poster */}
       <section id="home" className="scroll-mt-24">
         <div className="w-full px-4 pt-6 pb-14">
           <div
