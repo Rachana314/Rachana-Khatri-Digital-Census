@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import QRCode from "react-qr-code";
 import { apiFetch } from "../../lib/api";
-import { FiEye, FiEyeOff } from "react-icons/fi";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 const PUBLIC_BASE =
@@ -232,10 +231,12 @@ export default function Settings() {
         </div>
       )}
 
+      {/* Profile Photo */}
       <div className="rounded-3xl bg-white border shadow-sm p-6 space-y-4">
         <div className="font-extrabold text-lg">Profile Photo</div>
 
         <div className="flex items-center gap-5 flex-wrap">
+          {/* Avatar preview */}
           <div className="h-28 w-28 rounded-full overflow-hidden border bg-zinc-100">
             {currentAvatar ? (
               <img
@@ -251,10 +252,13 @@ export default function Settings() {
           </div>
 
           <div className="space-y-3">
+            {/* Hidden file input + styled label button */}
             <input
               type="file"
               accept="image/*"
               disabled={uploading}
+              id="avatar-upload"
+              className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
@@ -262,8 +266,14 @@ export default function Settings() {
                 e.target.value = "";
               }}
             />
-
-           
+            <label
+              htmlFor="avatar-upload"
+              className={`inline-flex items-center rounded-2xl px-5 py-3 font-extrabold border cursor-pointer hover:bg-black/5 transition ${
+                uploading ? "opacity-50 pointer-events-none" : ""
+              }`}
+            >
+              Choose Photo
+            </label>
 
             {selectedFile && (
               <div className="text-sm font-semibold text-black/70">
@@ -294,6 +304,7 @@ export default function Settings() {
         </div>
       </div>
 
+      {/* Password & Security */}
       <div className="rounded-3xl bg-white border shadow-sm p-6 space-y-4">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
@@ -361,9 +372,9 @@ export default function Settings() {
         )}
       </div>
 
+      {/* Verification & QR */}
       <div className="rounded-3xl bg-white border shadow-sm p-6 space-y-4">
         <div className="font-extrabold text-lg">Verification & QR</div>
-        
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="rounded-2xl border p-4 bg-zinc-50">
@@ -389,8 +400,7 @@ export default function Settings() {
               </div>
 
               <div className="text-sm text-black/60">
-                This QR code  always
-                shows the latest form status.
+                This QR code always shows the latest form status.
               </div>
 
               <div className="bg-white p-4 rounded-2xl border inline-block">
@@ -427,7 +437,7 @@ export default function Settings() {
                 QR code is not available yet.
               </div>
               <div className="text-sm text-black/60">
-                Submit your household form first. After submission QR code 
+                Submit your household form first. After submission QR code will
                 appear here automatically.
               </div>
             </div>
@@ -444,6 +454,7 @@ export default function Settings() {
         </div>
       </div>
 
+      {/* Account / Logout */}
       <div className="rounded-3xl bg-white border shadow-sm p-6 space-y-4">
         <div className="font-extrabold text-lg">Account</div>
         <p className="text-sm text-black/60">
