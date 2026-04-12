@@ -197,7 +197,7 @@ export default function UserLayout() {
       <aside className="hidden md:flex w-72 bg-orange-100 flex-col sticky top-0 h-screen overflow-y-auto border-r border-orange-200">
         <div className="p-5 border-b border-orange-200">
           <h2 className="text-2xl font-extrabold text-orange-900">Digital Census</h2>
-          <p className="text-sm text-orange-700 font-semibold">User Panel</p>
+          
           <Avatar />
         </div>
         <nav className="p-4 space-y-2 flex-1">
