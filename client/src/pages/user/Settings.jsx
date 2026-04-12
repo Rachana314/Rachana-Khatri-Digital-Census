@@ -218,9 +218,6 @@ export default function Settings() {
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
         <h1 className="text-3xl font-extrabold">Settings</h1>
-        <p className="text-black/60 font-medium mt-1">
-          Manage your profile, security, verification, and account preferences.
-        </p>
       </div>
 
       {err && (
