@@ -8,7 +8,6 @@ const HOUSEHOLD_STATUSES = [
   { value: "verified", label: "Verified" },
   { value: "rejected", label: "Rejected" },
   { value: "correction_required", label: "Correction" },
-  { value: "draft", label: "Draft" },
 ];
 
 export default function AdminReports() {
@@ -21,6 +20,7 @@ export default function AdminReports() {
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const token = localStorage.getItem("token");
 
@@ -71,6 +71,13 @@ export default function AdminReports() {
     fetchCitizens();
   }, [activeTab]);
 
+  // ── Filtered Households by search query ─────────────────────────────
+  const filteredHouseholds = households.filter((h) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.trim().toLowerCase();
+    return (h.householdId || h._id || "").toLowerCase().includes(q);
+  });
+
   // ── Checkbox Helpers ────────────────────────────────────────────────
   const toggleHouse = (id) =>
     setSelectedHouseIds((prev) =>
@@ -79,9 +86,9 @@ export default function AdminReports() {
 
   const toggleAllHouses = () =>
     setSelectedHouseIds(
-      selectedHouseIds.length === households.length
+      selectedHouseIds.length === filteredHouseholds.length
         ? []
-        : households.map((h) => h._id)
+        : filteredHouseholds.map((h) => h._id)
     );
 
   const toggleCitizen = (id) =>
@@ -151,9 +158,7 @@ export default function AdminReports() {
       <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-extrabold">Reports</h1>
-          <p className="text-black/50 font-semibold mt-1 text-sm">
-            Select records from the list and export as PDF.
-          </p>
+
         </div>
 
         {/* Export Button */}
@@ -185,35 +190,59 @@ export default function AdminReports() {
       <div className="flex gap-2 border-b border-gray-200 mb-5">
         <TabButton
           active={activeTab === "household"}
-          onClick={() => { setActiveTab("household"); setStatus("all"); }}
+          onClick={() => { setActiveTab("household"); setStatus("all"); setSearchQuery(""); }}
           label="Household Forms"
           count={selectedHouseIds.length}
         />
-        <TabButton
-          active={activeTab === "verified"}
-          onClick={() => { setActiveTab("verified"); }}
-          label="Verified Citizen Forms"
-          count={selectedCitizenIds.length}
-        />
       </div>
 
-      {/* ── Status Filter (Household tab only) ── */}
+      {/* ── Status Filter + Search (Household tab only) ── */}
       {activeTab === "household" && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          {HOUSEHOLD_STATUSES.map((s) => (
-            <button
-              key={s.value}
-              onClick={() => setStatus(s.value)}
-              className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition duration-200
-                ${status === s.value
-                  ? "bg-blue-600 text-white border-blue-600"
-                  : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
-                }`}
-            >
-              {s.label}
-            </button>
-          ))}
-        </div>
+        <>
+          <div className="flex flex-wrap gap-2 mb-3">
+            {HOUSEHOLD_STATUSES.map((s) => (
+              <button
+                key={s.value}
+                onClick={() => setStatus(s.value)}
+                className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition duration-200
+                  ${status === s.value
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
+                  }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+
+          {/* ── Search Bar ── */}
+          <div className="relative mb-4">
+            <span className="absolute inset-y-0 left-3 flex items-center text-gray-400 pointer-events-none">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+              </svg>
+            </span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by Household ID..."
+              className="w-full pl-9 pr-9 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold
+                text-gray-700 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1
+                focus:ring-blue-500 transition duration-200"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 transition"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </>
       )}
 
       {/* ── Error ── */}
@@ -225,13 +254,20 @@ export default function AdminReports() {
 
       {/* ── Household Tab Content ── */}
       {activeTab === "household" && (
-        <HouseholdTable
-          households={households}
-          selectedIds={selectedHouseIds}
-          loading={loading}
-          toggleOne={toggleHouse}
-          toggleAll={toggleAllHouses}
-        />
+        <>
+          {searchQuery && (
+            <p className="text-xs text-gray-400 font-semibold mb-2">
+              {filteredHouseholds.length} result{filteredHouseholds.length !== 1 ? "s" : ""} for &quot;{searchQuery}&quot;
+            </p>
+          )}
+          <HouseholdTable
+            households={filteredHouseholds}
+            selectedIds={selectedHouseIds}
+            loading={loading}
+            toggleOne={toggleHouse}
+            toggleAll={toggleAllHouses}
+          />
+        </>
       )}
 
       {/* ── Verified Citizen Tab Content ── */}

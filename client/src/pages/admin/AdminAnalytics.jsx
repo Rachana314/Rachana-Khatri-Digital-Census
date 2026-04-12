@@ -145,7 +145,6 @@ export default function AdminAnalytics() {
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-zinc-900">Analytics</h1>
-        <p className="text-black/40 font-semibold mt-1 text-sm">Census population breakdowns and ward-wise insights.</p>
       </div>
 
       {/* Stat cards */}
