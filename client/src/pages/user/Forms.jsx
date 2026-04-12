@@ -80,9 +80,6 @@ export default function Forms() {
           <h1 className="text-2xl sm:text-3xl font-extrabold">
             {t("forms.title")}
           </h1>
-          <p className="text-black/60 font-medium mt-1">
-            {t("forms.subtitle")}
-          </p>
         </div>
 
         {!hasForm && (
