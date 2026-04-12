@@ -47,7 +47,6 @@ export default function HouseholdMapDashboard() {
     return acc;
   }, {});
 
-  // Center on Nepal/your region — adjust as needed
   const center = [26.6586, 87.2878];
 
   return (
@@ -58,9 +57,6 @@ export default function HouseholdMapDashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">Household Distribution Map</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Verified household locations across all wards
-            </p>
           </div>
           <span className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-medium">
             Live Data
@@ -115,7 +111,6 @@ export default function HouseholdMapDashboard() {
           )}
         </div>
 
-        {/* Map + Sidebar */}
         <div className="flex gap-4 h-[600px]">
           {/* Map */}
           <div className="flex-1 rounded-xl overflow-hidden border border-gray-200 shadow-sm">
@@ -157,7 +152,7 @@ export default function HouseholdMapDashboard() {
             )}
           </div>
 
-          {/* Ward Summary Sidebar */}
+          {/* Ward Sidebar */}
           <div className="w-64 bg-white rounded-xl border border-gray-100 shadow-sm p-4 overflow-y-auto flex-shrink-0">
             <h2 className="text-sm font-semibold text-gray-700 mb-3">Ward Summary</h2>
             {Object.keys(wardCounts).length === 0 ? (
