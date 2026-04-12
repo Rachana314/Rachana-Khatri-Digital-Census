@@ -146,7 +146,6 @@ export default function AdminHouseholds() {
       <div className="rounded-3xl bg-white border p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-black text-zinc-900">Census Management</h1>
-          <p className="text-zinc-500 font-bold mt-1">Review and validate household submissions.</p>
         </div>
         <button onClick={() => loadHouseholds({ isRefresh: true })} className="rounded-2xl px-5 py-2.5 font-extrabold bg-zinc-100 border hover:bg-zinc-200 transition">
           {refreshing ? "Updating..." : "Refresh Data"}
