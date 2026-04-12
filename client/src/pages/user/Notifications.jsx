@@ -211,9 +211,6 @@ export default function Notifications() {
               </span>
             )}
           </div>
-          <p className="text-black/60 font-medium mt-1">
-            {t("notifications.subtitle", { defaultValue: "Stay up to date with your activity" })}
-          </p>
         </div>
 
         {/* Bulk actions */}
