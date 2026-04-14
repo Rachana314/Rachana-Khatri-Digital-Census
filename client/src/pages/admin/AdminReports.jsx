@@ -71,11 +71,15 @@ export default function AdminReports() {
     fetchCitizens();
   }, [activeTab]);
 
-  // ── Filtered Households by search query ─────────────────────────────
+  // ── Filtered Households ─────────────────────────────────────────────
   const filteredHouseholds = households.filter((h) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.trim().toLowerCase();
-    return (h.householdId || h._id || "").toLowerCase().includes(q);
+    return (
+      (h.householdId || h._id || "").toLowerCase().includes(q) ||
+      (h.user?.email || "").toLowerCase().includes(q) ||
+      (h.user?.name || "").toLowerCase().includes(q)
+    );
   });
 
   // ── Checkbox Helpers ────────────────────────────────────────────────
@@ -105,14 +109,10 @@ export default function AdminReports() {
 
   // ── Export PDF ──────────────────────────────────────────────────────
   const handleExport = async () => {
-    const houseIds = selectedHouseIds;
-    const citizenIds = selectedCitizenIds;
-
-    if (houseIds.length === 0 && citizenIds.length === 0) {
+    if (selectedHouseIds.length === 0 && selectedCitizenIds.length === 0) {
       alert("Please select at least one record to export.");
       return;
     }
-
     try {
       setExporting(true);
       const res = await fetch(`${API}/api/admin/reports/pdf`, {
@@ -121,7 +121,10 @@ export default function AdminReports() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ householdIds: houseIds, citizenIds }),
+        body: JSON.stringify({
+          householdIds: selectedHouseIds,
+          citizenIds: selectedCitizenIds,
+        }),
       });
 
       if (!res.ok) {
@@ -143,7 +146,6 @@ export default function AdminReports() {
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      console.error(err);
       alert(err.message || "PDF export failed");
     } finally {
       setExporting(false);
@@ -154,14 +156,9 @@ export default function AdminReports() {
 
   return (
     <div className="bg-white rounded-3xl border border-gray-300 shadow-sm p-6">
-      {/* ── Page Header ── */}
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-extrabold">Reports</h1>
-
-        </div>
-
-        {/* Export Button */}
+        <h1 className="text-2xl font-extrabold">Reports</h1>
         <button
           onClick={handleExport}
           disabled={exporting || totalSelected === 0}
@@ -186,7 +183,7 @@ export default function AdminReports() {
         </button>
       </div>
 
-      {/* ── Tabs ── */}
+      {/* Tabs */}
       <div className="flex gap-2 border-b border-gray-200 mb-5">
         <TabButton
           active={activeTab === "household"}
@@ -196,7 +193,7 @@ export default function AdminReports() {
         />
       </div>
 
-      {/* ── Status Filter + Search (Household tab only) ── */}
+      {/* Filters (Household tab only) */}
       {activeTab === "household" && (
         <>
           <div className="flex flex-wrap gap-2 mb-3">
@@ -215,7 +212,7 @@ export default function AdminReports() {
             ))}
           </div>
 
-          {/* ── Search Bar ── */}
+          {/* Search — now also searches by email */}
           <div className="relative mb-4">
             <span className="absolute inset-y-0 left-3 flex items-center text-gray-400 pointer-events-none">
               <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -226,7 +223,7 @@ export default function AdminReports() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by Household ID..."
+              placeholder="Search by Household ID or email..."
               className="w-full pl-9 pr-9 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold
                 text-gray-700 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1
                 focus:ring-blue-500 transition duration-200"
@@ -245,14 +242,14 @@ export default function AdminReports() {
         </>
       )}
 
-      {/* ── Error ── */}
+      {/* Error */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-600 text-sm font-semibold px-4 py-3 rounded-xl mb-4">
           {error}
         </div>
       )}
 
-      {/* ── Household Tab Content ── */}
+      {/* Household Table */}
       {activeTab === "household" && (
         <>
           {searchQuery && (
@@ -270,7 +267,7 @@ export default function AdminReports() {
         </>
       )}
 
-      {/* ── Verified Citizen Tab Content ── */}
+      {/* Verified Citizen Table */}
       {activeTab === "verified" && (
         <CitizenTable
           citizens={citizens}
@@ -281,7 +278,7 @@ export default function AdminReports() {
         />
       )}
 
-      {/* ── Bottom Selection Summary ── */}
+      {/* Bottom summary */}
       <div className="mt-4 flex items-center justify-between flex-wrap gap-2">
         <div className="text-sm text-gray-500 font-semibold">
           {totalSelected === 0 ? (
@@ -292,8 +289,7 @@ export default function AdminReports() {
               {totalSelected !== 1 ? "s" : ""} selected
               {selectedHouseIds.length > 0 && (
                 <span className="ml-2 text-gray-400">
-                  ({selectedHouseIds.length} household
-                  {selectedHouseIds.length !== 1 ? "s" : ""}
+                  ({selectedHouseIds.length} household{selectedHouseIds.length !== 1 ? "s" : ""}
                   {selectedCitizenIds.length > 0 ? `, ${selectedCitizenIds.length} citizen${selectedCitizenIds.length !== 1 ? "s" : ""}` : ""})
                 </span>
               )}
@@ -316,10 +312,7 @@ function TabButton({ active, onClick, label, count }) {
     <button
       onClick={onClick}
       className={`px-5 py-2.5 text-sm font-extrabold border-b-2 transition duration-200 flex items-center gap-2
-        ${active
-          ? "border-blue-600 text-blue-600"
-          : "border-transparent text-gray-500 hover:text-gray-800"
-        }`}
+        ${active ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-800"}`}
     >
       {label}
       {count > 0 && (
@@ -355,13 +348,15 @@ function HouseholdTable({ households, selectedIds, loading, toggleOne, toggleAll
         </div>
         <div className="col-span-3 text-xs font-extrabold text-gray-500 uppercase">Household ID</div>
         <div className="col-span-2 text-xs font-extrabold text-gray-500 uppercase">Ward</div>
-        <div className="col-span-3 text-xs font-extrabold text-gray-500 uppercase">Address</div>
-        <div className="col-span-2 text-xs font-extrabold text-gray-500 uppercase">Status</div>
+        <div className="col-span-2 text-xs font-extrabold text-gray-500 uppercase">Address</div>
+        {/* ✅ NEW column */}
+        <div className="col-span-2 text-xs font-extrabold text-gray-500 uppercase">Submitted By</div>
+        <div className="col-span-1 text-xs font-extrabold text-gray-500 uppercase">Status</div>
         <div className="col-span-1 text-xs font-extrabold text-gray-500 uppercase">Members</div>
       </div>
 
       {/* Rows */}
-      <div className="max-h-96 overflow-y-auto">
+      <div className="max-h-[520px] overflow-y-auto">
         {households.map((h) => (
           <div
             key={h._id}
@@ -379,12 +374,29 @@ function HouseholdTable({ households, selectedIds, loading, toggleOne, toggleAll
                 className="w-4 h-4 accent-blue-600 cursor-pointer"
               />
             </div>
-            <div className="col-span-3 text-sm font-mono text-gray-800 truncate">
+            <div className="col-span-3 text-xs font-mono text-gray-800 truncate">
               {h.householdId || h._id}
             </div>
             <div className="col-span-2 text-sm text-gray-600 truncate">{h.ward || "—"}</div>
-            <div className="col-span-3 text-sm text-gray-600 truncate">{h.address || "—"}</div>
-            <div className="col-span-2">
+            <div className="col-span-2 text-sm text-gray-600 truncate">{h.address || "—"}</div>
+
+            {/* ✅ NEW: Submitted By cell */}
+            <div className="col-span-2 flex flex-col min-w-0">
+              {h.user?.email ? (
+                <>
+                  <span className="text-xs font-bold text-blue-700 truncate" title={h.user.email}>
+                    {h.user.email}
+                  </span>
+                  {h.user?.name && (
+                    <span className="text-[10px] text-gray-400 truncate">{h.user.name}</span>
+                  )}
+                </>
+              ) : (
+                <span className="text-xs text-gray-400 italic">Unknown</span>
+              )}
+            </div>
+
+            <div className="col-span-1">
               <StatusBadge status={h.status} />
             </div>
             <div className="col-span-1 text-sm text-gray-600">
@@ -408,7 +420,6 @@ function CitizenTable({ citizens, selectedIds, loading, toggleOne, toggleAll }) 
 
   return (
     <div className="border border-gray-200 rounded-2xl overflow-hidden">
-      {/* Header */}
       <div className="bg-gray-50 px-4 py-3 grid grid-cols-12 gap-2 border-b border-gray-200">
         <div className="col-span-1 flex items-center">
           <input
@@ -424,13 +435,11 @@ function CitizenTable({ citizens, selectedIds, loading, toggleOne, toggleAll }) 
         <div className="col-span-2 text-xs font-extrabold text-gray-500 uppercase">District</div>
         <div className="col-span-2 text-xs font-extrabold text-gray-500 uppercase">DOB</div>
       </div>
-
-      {/* Rows */}
-      <div className="max-h-96 overflow-y-auto">
+      <div className="max-h-[520px] overflow-y-auto">
         {citizens.map((c) => (
           <div
             key={c._id}
-            onClick={() => toggleOne(c._id)}
+            onClick={() => toggleCitizen(c._id)}
             className={`px-4 py-3 grid grid-cols-12 gap-2 items-center border-b border-gray-100
               cursor-pointer transition duration-150
               ${selectedIds.includes(c._id) ? "bg-blue-50" : "hover:bg-gray-50"}`}
@@ -444,9 +453,7 @@ function CitizenTable({ citizens, selectedIds, loading, toggleOne, toggleAll }) 
                 className="w-4 h-4 accent-blue-600 cursor-pointer"
               />
             </div>
-            <div className="col-span-3 text-sm font-mono text-gray-800 truncate">
-              {c.citizenshipNo}
-            </div>
+            <div className="col-span-3 text-sm font-mono text-gray-800 truncate">{c.citizenshipNo}</div>
             <div className="col-span-4 text-sm text-gray-700 truncate">{c.fullName || "—"}</div>
             <div className="col-span-2 text-sm text-gray-600 truncate">{c.district || "—"}</div>
             <div className="col-span-2 text-sm text-gray-600">
@@ -475,7 +482,6 @@ function StatusBadge({ status }) {
   );
 }
 
-// ── Loading & Empty States ────────────────────────────────────────────────────
 function LoadingState({ text }) {
   return (
     <div className="py-12 text-center text-gray-400 text-sm font-semibold">

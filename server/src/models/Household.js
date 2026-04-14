@@ -11,6 +11,8 @@ const MemberSchema = new mongoose.Schema(
     disability: { type: Boolean, default: false },
     disabilityDetail: { type: String, default: "" },
     photo: { type: String, default: "" },
+    citizenshipId: { type: String, default: "" },  // ✅ NEW
+    docType: { type: String, default: "" },         // ✅ NEW
   },
   { _id: false }
 );
@@ -19,12 +21,21 @@ const DocumentSchema = new mongoose.Schema(
   {
     type: {
       type: String,
-      enum: ["Citizenship", "Birth Certificate", "License", "Photo", "MemberPhoto"],
+      // ✅ Fixed: added BirthCertificate (no space) to match what frontend sends
+      enum: [
+        "Citizenship",
+        "BirthCertificate",
+        "Birth Certificate",
+        "License",
+        "Photo",
+        "MemberPhoto",
+      ],
       required: true,
     },
     url: { type: String, required: true },
     originalName: { type: String, default: "" },
     fileHash: { type: String, required: true, index: true, sparse: true },
+    memberName: { type: String, default: "" }, // ✅ NEW — links doc to member
   },
   { _id: false }
 );
@@ -32,23 +43,36 @@ const DocumentSchema = new mongoose.Schema(
 const HouseholdSchema = new mongoose.Schema(
   {
     householdId: { type: String, unique: true, index: true },
-    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, unique: true },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      unique: true,
+    },
     ward: { type: String, required: true },
     address: { type: String, required: true },
     members: { type: [MemberSchema], default: [] },
     documents: { type: [DocumentSchema], default: [] },
     status: {
       type: String,
-      enum: ["draft", "submitted", "correction_required", "rejected", "verified"],
+      enum: [
+        "draft",
+        "submitted",
+        "correction_required",
+        "rejected",
+        "verified",
+      ],
       default: "draft",
     },
     rejectionReason: { type: String, default: "" },
     locked: { type: Boolean, default: false },
-    verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    verifiedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
     verifiedAt: { type: Date, default: null },
     qrCodeData: { type: String, default: "" },
-
-    // ✅ lat/lng now in the correct schema
     lat: { type: Number, default: null },
     lng: { type: Number, default: null },
     location: {
