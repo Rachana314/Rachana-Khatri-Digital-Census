@@ -25,9 +25,13 @@ const userSchema = new mongoose.Schema(
 
     isVerified: { type: Boolean, default: false },
 
-    // OTP fields
+    // Email verification OTP fields
     verificationCode: { type: String, default: null },
     verificationCodeExpiryTime: { type: Date, default: null },
+
+    // Password reset OTP fields ✅ ADDED
+    resetPasswordCode: { type: String, default: null },
+    resetPasswordCodeExpiryTime: { type: Date, default: null },
   },
   { timestamps: true }
 );

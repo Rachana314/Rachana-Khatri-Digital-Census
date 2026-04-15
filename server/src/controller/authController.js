@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import config from "../config/config.js";
+import { USER, ADMIN } from "../constants/roles.js";
 import { sendWelcomeEmail } from "../utils/sendEmailOtp.js";
 import {
   generateEmailOtp as generateEmailOtpService,
@@ -38,7 +39,7 @@ function createToken(user) {
 
 export async function register(req, res, next) {
   try {
-    const { name, email, phone, password, roles } = req.body;
+    const { name, email, phone, password } = req.body;
 
     if (!name || !email || !phone || !password) {
       return res.status(400).json({
@@ -67,15 +68,14 @@ export async function register(req, res, next) {
 
     const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "digitalcensus4@gmail.com";
 
-const user = await User.create({
-  name: name.trim(),
-  email: normalizedEmail,
-  phone: normalizedPhone,
-  password: hashedPassword,
-  roles: normalizedEmail === ADMIN_EMAIL ? ["ADMIN"] : ["user"],
-});
+    const user = await User.create({
+      name: name.trim(),
+      email: normalizedEmail,
+      phone: normalizedPhone,
+      password: hashedPassword,
+      roles: normalizedEmail === ADMIN_EMAIL ? [ADMIN] : [USER], // ✅ Fixed
+    });
 
-    // Send welcome email (fire-and-forget — won't block registration if it fails)
     sendWelcomeEmail(user.email, user.name);
 
     return res.status(201).json({
@@ -119,21 +119,20 @@ export async function login(req, res, next) {
       });
     }
 
-// ✅ Block anyone except admin email from admin login route
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "digitalcensus4@gmail.com";
-if (req.path.includes("admin") && normalizedEmail !== ADMIN_EMAIL) {
-  return res.status(403).json({
-    message: "Access denied. Admin only.",
-  });
-}
+    const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "digitalcensus4@gmail.com";
+    if (req.path.includes("admin") && normalizedEmail !== ADMIN_EMAIL) {
+      return res.status(403).json({
+        message: "Access denied. Admin only.",
+      });
+    }
 
-const token = createToken(user);
+    const token = createToken(user);
 
-return res.status(200).json({
-  message: "Login successful",
-  token,
-  user: buildUserResponse(user),
-});
+    return res.status(200).json({
+      message: "Login successful",
+      token,
+      user: buildUserResponse(user),
+    });
   } catch (err) {
     next(err);
   }

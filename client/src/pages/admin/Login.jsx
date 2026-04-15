@@ -9,11 +9,22 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!email) return alert("Enter email");
-    if (!password) return alert("Enter password");
+    setError("");
+    setSuccess("");
+
+    if (!email) {
+      setError("Enter email");
+      return;
+    }
+    if (!password) {
+      setError("Enter password");
+      return;
+    }
 
     try {
       setLoading(true);
@@ -29,11 +40,14 @@ export default function Login() {
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      alert(data.message || "Login successful");
-      navigate("/admin/dashboard");
+      setSuccess(data.message || "Login successful");
+
+      setTimeout(() => {
+        navigate("/admin/dashboard");
+      }, 1500);
     } catch (err) {
       console.error(err);
-      alert(err.message || "Login failed");
+      setError(err.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -44,6 +58,17 @@ export default function Login() {
       <div className="rounded-3xl bg-white/70 backdrop-blur border border-black/10 shadow-xl p-6 sm:p-8">
         <h1 className="text-2xl font-extrabold text-[var(--color-brandBlack)]">Admin Login</h1>
         <p className="text-sm text-black/60 mt-1">Login using email & password.</p>
+
+        {error && (
+          <div className="mt-4 rounded-xl bg-red-100 text-red-700 px-4 py-3 text-sm font-medium">
+            {error}
+          </div>
+        )}
+        {success && (
+          <div className="mt-4 rounded-xl bg-green-100 text-green-700 px-4 py-3 text-sm font-medium">
+            {success}
+          </div>
+        )}
 
         <form onSubmit={submit} className="mt-6 grid gap-4">
           <div>
@@ -84,8 +109,6 @@ export default function Login() {
             {loading ? "Please wait..." : "Login"}
           </button>
         </form>
-
-        
       </div>
     </div>
   );

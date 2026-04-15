@@ -12,13 +12,15 @@ import {
   uploadDocument,
   deleteHousehold,
   getHouseholdMapData,
+  checkPhotoHash, // ✅ new import
 } from "../controller/householdController.js";
 
 const router = express.Router();
 
-//router.get("/admin/map-data", adminMiddleWare, getHouseholdMapData);
-// ✅ This
 router.get("/admin/map-data", authMiddleware, adminMiddleWare, getHouseholdMapData);
+
+// ✅ IMPORTANT: This must be ABOVE /:householdId routes
+router.post("/check-photo-hash", authMiddleware, checkPhotoHash);
 
 router.get("/", authMiddleware, listHouseholds);
 router.post("/", authMiddleware, createHousehold);

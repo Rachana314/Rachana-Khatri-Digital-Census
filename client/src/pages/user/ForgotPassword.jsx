@@ -6,13 +6,16 @@ export default function ForgotPassword() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  // Send OTP to email then it redirect to reset-password page
   const submit = async (e) => {
     e.preventDefault();
+    setError("");
+    setSuccess("");
 
     if (!email) {
-      alert("Email is required");
+      setError("Email is required");
       return;
     }
 
@@ -22,18 +25,20 @@ export default function ForgotPassword() {
       const data = await apiFetch("/api/auth/user/forgot-password", {
         method: "POST",
         body: JSON.stringify({
-          email: email.trim().toLowerCase(), 
+          email: email.trim().toLowerCase(),
         }),
       });
 
-      alert(data.message || "OTP sent to email");
+      setSuccess(data.message || "OTP sent to email");
 
-      // Pass email 
-      navigate("/reset-password", {
-        state: { email: email.trim().toLowerCase() },
-      });
+      // Pass email and redirect after 1.5s
+      setTimeout(() => {
+        navigate("/reset-password", {
+          state: { email: email.trim().toLowerCase() },
+        });
+      }, 1500);
     } catch (err) {
-      alert(err.message || "Failed to send OTP");
+      setError(err.message || "Failed to send OTP");
     } finally {
       setLoading(false);
     }
@@ -47,6 +52,17 @@ export default function ForgotPassword() {
           Enter your email and we will send you an OTP to reset your password.
         </p>
 
+        {error && (
+          <div className="mt-4 rounded-xl bg-red-100 text-red-700 px-4 py-3 text-sm font-medium">
+            {error}
+          </div>
+        )}
+        {success && (
+          <div className="mt-4 rounded-xl bg-green-100 text-green-700 px-4 py-3 text-sm font-medium">
+            {success}
+          </div>
+        )}
+
         <form onSubmit={submit} className="mt-6 grid gap-4">
           <input
             type="email"
@@ -56,7 +72,6 @@ export default function ForgotPassword() {
             className="rounded-2xl border px-4 py-3"
           />
 
-          {/* Button is disabled when ots waiting for the API response */}
           <button
             disabled={loading}
             className="rounded-2xl bg-red-600 text-white py-3 font-bold disabled:opacity-60"

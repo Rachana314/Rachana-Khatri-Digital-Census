@@ -7,7 +7,7 @@ export const getAdminNotifications = async (req, res) => {
   try {
     const requests = await Request.find({ status: "pending" })
       .populate("user", "name email")
-      .populate("householdId", "householdId address")
+      .populate("householdId", "householdId address members")
       .sort({ createdAt: -1 });
 
     res.status(200).json(requests);

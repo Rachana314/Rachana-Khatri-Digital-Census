@@ -5,6 +5,14 @@ import { uploadDoc } from "../../lib/upload";
 
 const CITIZENSHIP_REGEX = /^\d{2}-\d{2}-\d{2}-\d{4}$/;
 
+// ✅ Hash utility
+async function getFileHash(file) {
+  const buffer = await file.arrayBuffer();
+  const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 export default function HouseholdNew() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -32,9 +40,11 @@ export default function HouseholdNew() {
     docType: "Citizenship",
     photoFile: null,
     photoPreview: null,
+    photoHash: null, // ✅
   });
 
   const [citizenshipError, setCitizenshipError] = useState("");
+  const [photoError, setPhotoError] = useState(""); // ✅
 
   const [documents, setDocuments] = useState([]);
   const [loadingEdit, setLoadingEdit] = useState(false);
@@ -106,13 +116,12 @@ export default function HouseholdNew() {
   };
 
   const handleCitizenshipInput = (val) => {
-    // Auto-format as user types: insert dashes at positions 2, 5, 8
     let cleaned = val.replace(/[^0-9]/g, "");
     let formatted = cleaned;
     if (cleaned.length > 2) formatted = cleaned.slice(0, 2) + "-" + cleaned.slice(2);
     if (cleaned.length > 4) formatted = formatted.slice(0, 5) + "-" + cleaned.slice(4);
     if (cleaned.length > 6) formatted = formatted.slice(0, 8) + "-" + cleaned.slice(6);
-    if (cleaned.length > 10) formatted = formatted.slice(0, 13); // cap at 01-02-00-0213
+    if (cleaned.length > 10) formatted = formatted.slice(0, 13);
 
     setMemberDraft((prev) => ({ ...prev, citizenshipId: formatted }));
 
@@ -123,11 +132,46 @@ export default function HouseholdNew() {
     }
   };
 
-  const handlePhotoChange = (e) => {
+  // ✅ Updated handlePhotoChange with duplicate detection
+  const handlePhotoChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    setPhotoError("");
+
+    // Generate hash
+    const hash = await getFileHash(file);
+
+    // ✅ Check against already added members in current form session
+    const isDuplicateInForm = members.some((m) => m.photoHash === hash);
+    if (isDuplicateInForm) {
+      setPhotoError("⚠️ This photo is already used by another member. Please upload a different photo.");
+      e.target.value = "";
+      return;
+    }
+
+    // ✅ Check against database
+    try {
+      const res = await apiFetch("/api/households/check-photo-hash", {
+        method: "POST",
+        body: JSON.stringify({ hash }),
+      });
+      if (res.isDuplicate) {
+        setPhotoError("⚠️ This photo already exists in the system. Please use a different photo.");
+        e.target.value = "";
+        return;
+      }
+    } catch {
+      // fail silently — backend will catch it on upload anyway
+    }
+
     const previewUrl = URL.createObjectURL(file);
-    setMemberDraft((prev) => ({ ...prev, photoFile: file, photoPreview: previewUrl }));
+    setMemberDraft((prev) => ({
+      ...prev,
+      photoFile: file,
+      photoPreview: previewUrl,
+      photoHash: hash, // ✅ store hash
+    }));
   };
 
   const addMember = async () => {
@@ -162,7 +206,6 @@ export default function HouseholdNew() {
           const res = await uploadDoc(currentId, memberDraft.docType, memberDraft.photoFile);
           uploadedPhotoUrl = res?.item?.documents?.at(-1)?.url || memberDraft.photoPreview || "";
         } catch {
-          // fallback to local preview
           uploadedPhotoUrl = memberDraft.photoPreview || "";
         }
       }
@@ -179,6 +222,7 @@ export default function HouseholdNew() {
         citizenshipId: memberDraft.citizenshipId.trim(),
         docType: memberDraft.docType,
         photo: uploadedPhotoUrl,
+        photoHash: memberDraft.photoHash || null, // ✅ store hash in member
       };
 
       setMembers((prev) => [...prev, newMember]);
@@ -189,8 +233,10 @@ export default function HouseholdNew() {
         education: "", occupation: "", disability: false, disabilityDetail: "",
         citizenshipId: "", docType: "Citizenship",
         photoFile: null, photoPreview: null,
+        photoHash: null, // ✅ reset hash
       });
       setCitizenshipError("");
+      setPhotoError(""); // ✅ reset photo error
     } catch (e) {
       setError(e.message || "Failed to add member");
     } finally {
@@ -306,7 +352,7 @@ export default function HouseholdNew() {
         </div>
 
         <div className="mt-6">
-          {/* ── STEP 0: Household ── */}
+          {/* STEP 0: Household */}
           {step === 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -330,7 +376,7 @@ export default function HouseholdNew() {
             </div>
           )}
 
-          {/* ── STEP 1: Members ── */}
+          {/* STEP 1: Members */}
           {step === 1 && (
             <div className="space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -406,19 +452,24 @@ export default function HouseholdNew() {
                   onChange={(e) => setMemberDraft({ ...memberDraft, occupation: e.target.value })}
                 />
 
-                {/* Document Type Dropdown + File Upload */}
+                {/* Document Type + File Upload */}
                 <div className="flex flex-col lg:col-span-2">
                   <label className="text-[10px] font-bold uppercase ml-1 mb-1 text-black/40">
                     Document Photo
                   </label>
                   <div className="flex gap-2 items-stretch">
-                    {/* Document type selector */}
                     <select
                       disabled={!canEdit}
                       className="rounded-2xl border p-3 text-sm font-semibold bg-zinc-50 min-w-[170px]"
                       value={memberDraft.docType}
                       onChange={(e) =>
-                        setMemberDraft({ ...memberDraft, docType: e.target.value, photoFile: null, photoPreview: null })
+                        setMemberDraft({
+                          ...memberDraft,
+                          docType: e.target.value,
+                          photoFile: null,
+                          photoPreview: null,
+                          photoHash: null, // ✅ reset hash on type change
+                        })
                       }
                     >
                       <option value="Citizenship">Citizenship</option>
@@ -426,7 +477,6 @@ export default function HouseholdNew() {
                       <option value="License">License</option>
                     </select>
 
-                    {/* Custom file button */}
                     <label
                       className={`flex-1 flex items-center gap-2 rounded-2xl border p-3 cursor-pointer text-sm font-semibold text-zinc-600 hover:bg-zinc-50 transition ${
                         !canEdit ? "opacity-50 pointer-events-none" : ""
@@ -446,6 +496,11 @@ export default function HouseholdNew() {
                     </label>
                   </div>
 
+                  {/* ✅ Photo error message */}
+                  {photoError && (
+                    <p className="text-rose-500 text-xs mt-2 ml-1 font-semibold">{photoError}</p>
+                  )}
+
                   {/* Photo Preview */}
                   {memberDraft.photoPreview && (
                     <div className="mt-3 flex items-start gap-3">
@@ -457,7 +512,14 @@ export default function HouseholdNew() {
                         />
                         <button
                           type="button"
-                          onClick={() => setMemberDraft((p) => ({ ...p, photoFile: null, photoPreview: null }))}
+                          onClick={() =>
+                            setMemberDraft((p) => ({
+                              ...p,
+                              photoFile: null,
+                              photoPreview: null,
+                              photoHash: null, // ✅ clear hash on remove
+                            }))
+                          }
                           className="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shadow"
                         >
                           ×
@@ -515,7 +577,6 @@ export default function HouseholdNew() {
                     className="rounded-2xl border p-4 bg-zinc-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                   >
                     <div className="flex items-start gap-4">
-                      {/* Document Photo Preview */}
                       <div className="flex flex-col items-center gap-1">
                         <div className="h-16 w-16 rounded-xl bg-zinc-200 overflow-hidden border-2 border-zinc-300 shadow-sm">
                           {m.photo ? (
@@ -537,7 +598,6 @@ export default function HouseholdNew() {
                         )}
                       </div>
 
-                      {/* Member Info */}
                       <div>
                         <div className="font-bold text-sm">
                           {m.name}{" "}
@@ -567,7 +627,7 @@ export default function HouseholdNew() {
             </div>
           )}
 
-          {/* ── STEP 2: Review ── */}
+          {/* STEP 2: Review */}
           {step === 2 && (
             <div className="space-y-4">
               <div className="rounded-2xl border p-4 bg-zinc-50">

@@ -6,7 +6,7 @@ import { apiFetch } from "../../lib/api";
 export default function ResetPassword() {
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // refill email if redirected from forgot-password page
   const [email, setEmail] = useState(location.state?.email || "");
   const [otp, setOtp] = useState("");
@@ -15,12 +15,16 @@ export default function ResetPassword() {
   const [showNewPw, setShowNewPw] = useState(false);
   const [showConfirmPw, setShowConfirmPw] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const submit = async (e) => {
     e.preventDefault();
+    setError("");
+    setSuccess("");
 
     if (!email || !otp || !newPassword || !confirmPassword) {
-      alert("All fields are required");
+      setError("All fields are required");
       return;
     }
 
@@ -37,14 +41,16 @@ export default function ResetPassword() {
         }),
       });
 
-      alert(data.message || "Password reset successful");
+      setSuccess(data.message || "Password reset successful");
 
-      // After reset, redirect to login 
-      navigate("/login", {
-        state: { email: email.trim().toLowerCase() },
-      });
+      // Redirect to login after 1.5s
+      setTimeout(() => {
+        navigate("/login", {
+          state: { email: email.trim().toLowerCase() },
+        });
+      }, 1500);
     } catch (err) {
-      alert(err.message || "Failed to reset password");
+      setError(err.message || "Failed to reset password");
     } finally {
       setLoading(false);
     }
@@ -57,6 +63,17 @@ export default function ResetPassword() {
         <p className="mt-2 text-sm text-gray-600">
           Enter the OTP sent to your email and choose a new password.
         </p>
+
+        {error && (
+          <div className="mt-4 rounded-xl bg-red-100 text-red-700 px-4 py-3 text-sm font-medium">
+            {error}
+          </div>
+        )}
+        {success && (
+          <div className="mt-4 rounded-xl bg-green-100 text-green-700 px-4 py-3 text-sm font-medium">
+            {success}
+          </div>
+        )}
 
         <form onSubmit={submit} className="mt-6 grid gap-4">
           <input
@@ -102,7 +119,6 @@ export default function ResetPassword() {
             </button>
           </div>
 
-        
           <button
             disabled={loading}
             className="rounded-2xl bg-red-600 text-white py-3 font-bold disabled:opacity-60"
