@@ -5,7 +5,8 @@ import { apiFetch } from "../../lib/api";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 const PUBLIC_BASE =
-  import.meta.env.VITE_PUBLIC_BASE_URL || "http://192.168.1.112:5173";
+  import.meta.env.VITE_PUBLIC_BASE_URL ||
+  `${window.location.protocol}//${window.location.host}`;
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -236,7 +237,6 @@ export default function Settings() {
         <div className="font-extrabold text-lg">Profile Photo</div>
 
         <div className="flex items-center gap-5 flex-wrap">
-          {/* Avatar preview */}
           <div className="h-28 w-28 rounded-full overflow-hidden border bg-zinc-100">
             {currentAvatar ? (
               <img
@@ -252,7 +252,6 @@ export default function Settings() {
           </div>
 
           <div className="space-y-3">
-            {/* Hidden file input + styled label button */}
             <input
               type="file"
               accept="image/*"

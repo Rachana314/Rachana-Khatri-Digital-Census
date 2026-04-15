@@ -20,6 +20,24 @@ function StatusBadge({ status }) {
   );
 }
 
+function ConfirmModal({ open, message, onConfirm, onCancel, busy }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-3xl bg-white border shadow-xl p-6">
+        <div className="text-xl font-extrabold text-zinc-900">Confirm Action</div>
+        <p className="text-zinc-500 text-sm font-semibold mt-2">{message}</p>
+        <div className="mt-6 flex justify-end gap-2">
+          <button onClick={onCancel} disabled={busy} className="rounded-2xl px-4 py-2 font-extrabold border hover:bg-zinc-50">Cancel</button>
+          <button onClick={onConfirm} disabled={busy} className="rounded-2xl px-4 py-2 font-extrabold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50">
+            {busy ? "Processing..." : "Confirm"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function RejectModal({ open, onClose, onSubmit, busy }) {
   const [reason, setReason] = useState("");
   useEffect(() => { if (open) setReason(""); }, [open]);
@@ -59,6 +77,8 @@ export default function AdminHouseholds() {
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectTarget, setRejectTarget] = useState("");
   const [busyAction, setBusyAction] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmTarget, setConfirmTarget] = useState("");
 
   const getHeaders = () => ({
     "Content-Type": "application/json",
@@ -98,25 +118,28 @@ export default function AdminHouseholds() {
     loadHouseholds();
   }, [status]);
 
-  // ✅ FIXED: using householdId instead of _id
-  const verify = async (householdId) => {
-    if (!window.confirm("Verify this household?")) return;
+  const openVerifyConfirm = (householdId) => {
+    setConfirmTarget(householdId);
+    setConfirmOpen(true);
+  };
+
+  const verify = async () => {
     setBusyAction(true);
     try {
-      const res = await fetch(`${BASE_URL}/api/admin/households/${householdId}/verify`, {
+      const res = await fetch(`${BASE_URL}/api/admin/households/${confirmTarget}/verify`, {
         method: "PATCH",
         headers: getHeaders(),
       });
       if (!res.ok) throw new Error("Verification failed");
+      setConfirmOpen(false);
       await Promise.all([loadProgress(), loadHouseholds({ isRefresh: true })]);
-    } catch (e) { setErr(e.message); } 
+    } catch (e) { setErr(e.message); }
     finally { setBusyAction(false); }
   };
 
-  // ✅ FIXED: using householdId instead of _id
-  const openReject = (householdId) => { 
-    setRejectTarget(householdId); 
-    setRejectOpen(true); 
+  const openReject = (householdId) => {
+    setRejectTarget(householdId);
+    setRejectOpen(true);
   };
 
   const reject = async (reason) => {
@@ -130,7 +153,7 @@ export default function AdminHouseholds() {
       if (!res.ok) throw new Error("Rejection failed");
       setRejectOpen(false);
       await Promise.all([loadProgress(), loadHouseholds({ isRefresh: true })]);
-    } catch (e) { setErr(e.message); } 
+    } catch (e) { setErr(e.message); }
     finally { setBusyAction(false); }
   };
 
@@ -204,18 +227,15 @@ export default function AdminHouseholds() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  {/* ✅ FIXED: r.householdId instead of r._id */}
                   <Link
                     to={`/admin/households/${r.householdId}`}
                     className="px-5 py-2.5 rounded-xl bg-zinc-900 text-white font-black text-sm"
                   >
                     Review Details
                   </Link>
-
                   {r.status === "submitted" && (
                     <>
-                      {/* ✅ FIXED: r.householdId instead of r._id */}
-                      <button onClick={() => verify(r.householdId)} disabled={busyAction} className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition font-bold disabled:opacity-50">
+                      <button onClick={() => openVerifyConfirm(r.householdId)} disabled={busyAction} className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition font-bold disabled:opacity-50">
                         Verify
                       </button>
                       <button onClick={() => openReject(r.householdId)} disabled={busyAction} className="p-2.5 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 transition font-bold disabled:opacity-50">
@@ -230,6 +250,13 @@ export default function AdminHouseholds() {
         )}
       </div>
 
+      <ConfirmModal
+        open={confirmOpen}
+        message="Are you sure you want to verify this household?"
+        onConfirm={verify}
+        onCancel={() => setConfirmOpen(false)}
+        busy={busyAction}
+      />
       <RejectModal open={rejectOpen} onClose={() => setRejectOpen(false)} onSubmit={reject} busy={busyAction} />
     </div>
   );

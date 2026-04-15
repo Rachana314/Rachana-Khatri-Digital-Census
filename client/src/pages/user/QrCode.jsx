@@ -2,9 +2,17 @@ import { useParams, Link } from "react-router-dom";
 import { useRef } from "react";
 import QRCode from "react-qr-code";
 
+const PUBLIC_BASE =
+  import.meta.env.VITE_PUBLIC_BASE_URL ||
+  `${window.location.protocol}//${window.location.host}`;
+
 export default function QrCode() {
   const { householdId } = useParams();
   const qrRef = useRef(null);
+
+  const qrValue = householdId
+    ? `${PUBLIC_BASE}/verify/${householdId}`
+    : "N/A";
 
   const handleDownload = () => {
     const svg = qrRef.current?.querySelector("svg");
@@ -24,8 +32,8 @@ export default function QrCode() {
 
   const handleShare = async () => {
     try {
-      await navigator.clipboard.writeText(householdId);
-      alert("Household ID copied to clipboard!");
+      await navigator.clipboard.writeText(qrValue);
+      alert("QR link copied to clipboard!");
     } catch {
       alert("Could not copy to clipboard.");
     }
@@ -35,7 +43,10 @@ export default function QrCode() {
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl sm:text-3xl font-extrabold">Household QR</h1>
-        <Link to="/user/forms" className="rounded-2xl px-4 py-2 font-bold border hover:bg-black/5">
+        <Link
+          to="/user/forms"
+          className="rounded-2xl px-4 py-2 font-bold border hover:bg-black/5"
+        >
           Back
         </Link>
       </div>
@@ -45,13 +56,16 @@ export default function QrCode() {
           Household ID: <span className="text-orange-600">{householdId}</span>
         </div>
 
-        {/* QR Code */}
+        <div className="text-xs text-black/50 break-all mt-1">
+          QR target: {qrValue}
+        </div>
+
         <div
           ref={qrRef}
           className="mt-5 rounded-2xl border bg-white p-8 flex items-center justify-center"
         >
           <QRCode
-            value={householdId || "N/A"}
+            value={qrValue}
             size={240}
             bgColor="#ffffff"
             fgColor="#1a1a1a"

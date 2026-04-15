@@ -25,7 +25,9 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
+      "http://localhost:5174",
       "http://192.168.1.112:5173",
+      "http://192.168.1.112:5174",
     ],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -36,7 +38,6 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Fixed: go up from src to server
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 
 app.use("/api/auth", authRoutes);
